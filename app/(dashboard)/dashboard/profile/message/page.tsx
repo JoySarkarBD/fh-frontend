@@ -44,6 +44,12 @@ export default function UserMessagePage() {
                 </div>
                 <div className='text-gray-400 text-xs'>30m</div>
               </div>
+              <div className='flex items-start space-x-2'>
+                <div className='bg-blue-500 text-white p-2 rounded-lg max-w-xs'>
+                  Wow, Khalid The Coder is really epic
+                </div>
+                <div className='text-gray-400 text-xs'>30m</div>
+              </div>
             </div>
             {/* User Input Area */}
             <div className='flex items-center space-x-3 mt-4'>
