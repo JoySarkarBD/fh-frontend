@@ -10,6 +10,7 @@ import { LuEye, LuEyeOff, LuLock } from "react-icons/lu";
 import { MdOutlineEmail } from "react-icons/md";
 import { registerAction, RegisterPayload } from "@/actions/auth.action";
 import { ArrowLeft } from "lucide-react";
+import bgImage from "../../../public/signup.png";
 
 // TODO: Need to ask if home & office address will be taken from the sign up page or not
 
@@ -78,9 +79,18 @@ export default function SignupPage() {
   return (
     <div
       className='
-      min-h-screen w-full flex flex-col items-center justify-center
-      bg-linear-to-br from-white via-[#619B7F4D]  via-70% to-white py-12
+      min-h-screen w-full flex flex-col items-center justify-center  relative
     '>
+      {/* Background image */}
+      <div className='absolute inset-0 z-10'>
+        <Image
+          src={bgImage}
+          alt='Login Background'
+          fill
+          className='object-cover object-center opacity-100'
+          priority
+        />
+      </div>
       {/* Logo */}
       <div className='absolute top-6 left-6 flex items-center gap-2'>
         <Image
@@ -89,14 +99,14 @@ export default function SignupPage() {
           width={200}
           height={80}
           priority
-          className='h-15 w-auto object-contain'
+          className='h-15 w-auto object-contain z-10'
         />
       </div>
 
       {/* Card */}
       <form
         onSubmit={handleSubmit}
-        className='bg-white rounded-lg w-full max-w-md mx-4 px-8 py-8 border border-[#D1CEC6]'>
+        className='bg-white rounded-lg w-full max-w-md mx-4 px-8 py-8 border border-[#D1CEC6] relative z-10'>
         {/* Full Name */}
         <div className='mb-4'>
           <label className='block text-sm font-medium text-[#1B1B1A] mb-2'>
@@ -305,7 +315,7 @@ export default function SignupPage() {
       </form>
 
       {/* Back to home */}
-      <div className='my-6 flex items-center gap-2 text-gray-600 text-sm cursor-pointer hover:text-gray-800 transition-colors'>
+      <div className='my-6 flex items-center gap-2 text-gray-600 text-sm cursor-pointer hover:text-gray-800 transition-colors z-10'>
         <ArrowLeft className='w-4 h-4' />
         <Link href='/' className='hover:underline'>
           Back to home
