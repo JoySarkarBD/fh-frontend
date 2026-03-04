@@ -2,6 +2,12 @@
 
 import { cookies } from "next/headers";
 
+/**
+ * Determines the base URL for API requests based on environment variables and deployment context.
+ *
+ * @returns The base URL for API requests.
+ * @throws If no API base URL is configured in production.
+ */
 function getApiBaseUrl(): string {
   const configured =
     process.env.API_BASE_URL ?? process.env.NEXT_PUBLIC_API_BASE_URL;

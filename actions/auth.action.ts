@@ -41,6 +41,9 @@ export type AuthNavbarState = {
   userRole: "user" | "admin";
 };
 
+/**
+ * Defines the payload for adding or updating a user's address and phone number, specifying whether the information is for a home or office address. The payload includes optional fields for the address and phone number, allowing for flexibility in providing this information when updating the user's profile.
+ */
 export type AddAddressPayload = {
   type: "home" | "office";
   address?: string;
@@ -161,6 +164,12 @@ export async function getUserProfileAction(): Promise<UserProfile | null> {
   }
 }
 
+/**
+ * Adds or updates the user's home or office address and phone number based on the provided payload. The function sends a PATCH request to the /users/me endpoint with the appropriate fields for either home or office information, depending on the type specified in the payload.
+ *
+ * @param payload - An object containing the type of address (home or office), the address itself, and the associated phone number. The address and phone fields are optional and will be trimmed before being sent to the server.
+ * @returns A promise that resolves to the API response containing the success status, message, and the updated user profile data. If the request fails, it will throw an error with a message describing the issue.
+ */
 export async function addAddressAction(payload: AddAddressPayload) {
   const body =
     payload.type === "home"
@@ -179,6 +188,12 @@ export async function addAddressAction(payload: AddAddressPayload) {
   });
 }
 
+/**
+ * Updates the user's profile information, such as name and phone number, by sending a PATCH request to the /users/me endpoint with the provided payload. The function allows for partial updates, meaning that you can update either the name, the phone number, or both fields at the same time.
+ *
+ * @param payload - An object containing the fields to be updated in the user's profile. Both name and phone are optional, allowing for flexibility in updating only the desired fields. The function will trim the input values before sending them to the server to ensure that any leading or trailing whitespace is removed.
+ * @returns A promise that resolves to the API response containing the success status, message, and the updated user profile data. If the request fails, it will throw an error with a message describing the issue.
+ */
 export type UpdateProfilePayload = {
   name?: string;
   phone?: string;
