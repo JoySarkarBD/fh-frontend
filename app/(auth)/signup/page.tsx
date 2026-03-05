@@ -85,7 +85,7 @@ export default function SignupPage() {
       <div className='absolute inset-0 z-10'>
         <Image
           src={bgImage}
-          alt='Login Background'
+          alt='Signup Background'
           fill
           className='object-cover object-center opacity-100'
           priority
