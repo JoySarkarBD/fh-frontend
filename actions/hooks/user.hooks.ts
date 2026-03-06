@@ -1,4 +1,4 @@
-"use client";
+
 
 import { getUserClient, UsersResponse } from "@/services/user";
 import { getAllUsers } from "@/services/user";

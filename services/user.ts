@@ -1,4 +1,6 @@
+'use server'
 import axiosClient from "@/lib/axiosClient";
+import { axiosServer } from "@/lib/axiosServer";
 import { AxiosError } from "axios";
 
 export type UsersResponse = {
@@ -60,11 +62,21 @@ export const getUserClient = async () => {
 //  * @throws An error if the request fails, with details logged to the console for debugging.
 //  */
 
+
+//! initilize axios server!
+
+async function getAxiosInstance() {
+  return await axiosServer();
+}
+//
+
+
 export const getAllUsers = async (
   params: GetAllUsersParams = {},
 ): Promise<UsersResponse> => {
   try {
-    const { data } = await axiosClient.get<{
+        const axiosInstance = await getAxiosInstance();
+    const { data } = await axiosInstance.get<{
       success: boolean;
       data: UsersResponse;
     }>("/users", {
