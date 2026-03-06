@@ -1,6 +1,6 @@
 "use client";
 
-import { useCurrentUser, useLogoutMutation } from "@/actions/hooks/auth.hooks";
+import { useLogoutMutation } from "@/actions/hooks/auth.hooks";
 import { ChevronDown, ChevronUp, FileText, LogOut, X } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
@@ -21,6 +21,9 @@ import { MdOutlineDashboard } from "react-icons/md";
 
 type UserShellProps = {
   children: ReactNode;
+  isLoggedIn: boolean;
+  userRole: "user" | "admin";
+  isSubscribed: boolean;
 };
 
 type NavItem = {
@@ -30,7 +33,7 @@ type NavItem = {
   children?: { label: string; hash: string }[];
 };
 
-export default function UserShell({ children }: UserShellProps) {
+export default function UserShell({ children, isSubscribed }: UserShellProps) {
   const pathname = usePathname();
   const router = useRouter();
   const [currentHash, setCurrentHash] = useState("");
@@ -40,13 +43,10 @@ export default function UserShell({ children }: UserShellProps) {
   });
 
   // Get current user data
-  const { 
-    data: authState,
-    isLoading 
-  } = useCurrentUser();
+  // const { data: authState, isLoading } = useCurrentUser();
 
   // Check if user is subscribed (you need to adjust this based on your actual data structure)
-  const isSubscribed = authState?.isSubscribed ?? false;
+  // const isSubscribed = authState?.isSubscribed ?? false;
 
   // Logout mutation
   const logoutMutation = useLogoutMutation({
@@ -231,28 +231,28 @@ export default function UserShell({ children }: UserShellProps) {
   };
 
   // Loading state
-  if (isLoading) {
-    return (
-      <div className='md:mx-12.5 px-6 lg:px-8 py-13'>
-        <div className='flex flex-col md:grid md:grid-cols-12 gap-10'>
-          <aside className='hidden md:block md:col-span-3'>
-            <div className='md:sticky md:top-26 md:h-[calc(100vh-7rem)] border border-[#D1CEC6] rounded-lg p-4 flex flex-col'>
-              <div className='animate-pulse space-y-4'>
-                <div className='h-4 bg-gray-200 rounded w-3/4'></div>
-                <div className='h-4 bg-gray-200 rounded w-1/2'></div>
-                <div className='h-4 bg-gray-200 rounded w-2/3'></div>
-              </div>
-            </div>
-          </aside>
-          <main className='md:col-span-9 min-w-0'>
-            <div className='animate-pulse'>
-              <div className='h-64 bg-gray-200 rounded'></div>
-            </div>
-          </main>
-        </div>
-      </div>
-    );
-  }
+  // if (isLoading) {
+  //   return (
+  //     <div className='md:mx-12.5 px-6 lg:px-8 py-13'>
+  //       <div className='flex flex-col md:grid md:grid-cols-12 gap-10'>
+  //         <aside className='hidden md:block md:col-span-3'>
+  //           <div className='md:sticky md:top-26 md:h-[calc(100vh-7rem)] border border-[#D1CEC6] rounded-lg p-4 flex flex-col'>
+  //             <div className='animate-pulse space-y-4'>
+  //               <div className='h-4 bg-gray-200 rounded w-3/4'></div>
+  //               <div className='h-4 bg-gray-200 rounded w-1/2'></div>
+  //               <div className='h-4 bg-gray-200 rounded w-2/3'></div>
+  //             </div>
+  //           </div>
+  //         </aside>
+  //         <main className='md:col-span-9 min-w-0'>
+  //           <div className='animate-pulse'>
+  //             <div className='h-64 bg-gray-200 rounded'></div>
+  //           </div>
+  //         </main>
+  //       </div>
+  //     </div>
+  //   );
+  // }
 
   return (
     <div className='md:mx-12.5 px-6 lg:px-8 py-13'>

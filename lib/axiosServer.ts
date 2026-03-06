@@ -6,7 +6,7 @@ import { cookies } from "next/headers";
 export const axiosServer = async () => {
   const cookieStore = await cookies();
   const token = cookieStore.get("accessToken")?.value;
-  
+
   console.log("Server token:", token ? "Token found" : "No token");
 
   const instance = axios.create({
@@ -25,14 +25,9 @@ export const axiosServer = async () => {
   instance.interceptors.response.use(
     (response) => response,
     (error) => {
-      console.error("Server axios error:", {
-        url: error.config?.url,
-        method: error.config?.method,
-        status: error.response?.status,
-        data: error.response?.data,
-      });
+      // Suppress terminal error logs
       return Promise.reject(error);
-    }
+    },
   );
 
   return instance;

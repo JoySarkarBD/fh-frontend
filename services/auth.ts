@@ -33,13 +33,13 @@ export type LoginData = {
 
 type CurrentUserData = {
   role?: string;
-  isSubscribed:boolean
+  isSubscribed: boolean;
 };
 
 export type AuthNavbarState = {
   isLoggedIn: boolean;
   userRole: "user" | "admin";
-  isSubscribed:boolean
+  isSubscribed: boolean;
 };
 
 export type AddAddressPayload = {
@@ -84,7 +84,7 @@ export async function registerAction(payload: RegisterPayload) {
     const axiosInstance = await getAxiosInstance();
     const response = await axiosInstance.post<ApiResponse<unknown>>(
       "/auth/register",
-      payload
+      payload,
     );
 
     console.log("Registration successful:", response.data);
@@ -101,7 +101,7 @@ export async function registerAction(payload: RegisterPayload) {
     throw new Error(
       axiosError.response?.data?.message ||
         axiosError.message ||
-        "Registration failed. Please try again."
+        "Registration failed. Please try again.",
     );
   }
 }
@@ -110,16 +110,14 @@ export async function registerAction(payload: RegisterPayload) {
  * Logs in a user with the provided email and password
  */
 export async function loginAction(
-  payload: LoginPayload
+  payload: LoginPayload,
 ): Promise<ApiResponse<LoginData>> {
   try {
     const axiosInstance = await getAxiosInstance();
     const response = await axiosInstance.post<ApiResponse<LoginData>>(
       "/auth/login",
-      payload
+      payload,
     );
-
-    console.log("Login successful:", response.data);
 
     const token = response.data.data?.accessToken;
 
@@ -147,7 +145,7 @@ export async function loginAction(
     throw new Error(
       axiosError.response?.data?.message ||
         axiosError.message ||
-        "Login failed. Please try again."
+        "Login failed. Please try again.",
     );
   }
 }
@@ -158,9 +156,8 @@ export async function loginAction(
 export async function getCurrentUserFromTokenAction(): Promise<AuthNavbarState> {
   try {
     const axiosInstance = await getAxiosInstance();
-    const response = await axiosInstance.get<ApiResponse<CurrentUserData>>(
-      "/users/me"
-    );
+    const response =
+      await axiosInstance.get<ApiResponse<CurrentUserData>>("/users/me");
 
     console.log("Current user fetched:", response.data);
 
@@ -170,21 +167,16 @@ export async function getCurrentUserFromTokenAction(): Promise<AuthNavbarState> 
         : "user";
 
     const isSubscribed = Boolean(response.data?.data?.isSubscribed);
-    console.log(response.data?.data, 'logged susbcirbed');
+    console.log(response.data?.data, "logged susbcirbed");
 
     return {
       isLoggedIn: true,
       userRole: normalizedRole,
-      isSubscribed
+      isSubscribed,
     };
-  } catch (error) {
-    const axiosError = error as AxiosError<ApiErrorResponse>;
-
-    console.error("Get current user error:", {
-      message: axiosError.message,
-      status: axiosError.response?.status,
-      data: axiosError.response?.data,
-    });
+  } catch {
+    // Missing/expired token or unauthenticated requests are expected here.
+    // Return a safe logged-out state without noisy console errors.
 
     return {
       isLoggedIn: false,
@@ -200,21 +192,14 @@ export async function getCurrentUserFromTokenAction(): Promise<AuthNavbarState> 
 export async function getUserProfileAction(): Promise<UserProfile | null> {
   try {
     const axiosInstance = await getAxiosInstance();
-    const response = await axiosInstance.get<ApiResponse<UserProfile>>(
-      "/users/me"
-    );
+    const response =
+      await axiosInstance.get<ApiResponse<UserProfile>>("/users/me");
 
     console.log("User profile fetched:", response.data);
     return response.data.data ?? null;
-  } catch (error) {
-    const axiosError = error as AxiosError<ApiErrorResponse>;
-
-    console.error("Get user profile error:", {
-      message: axiosError.message,
-      status: axiosError.response?.status,
-      data: axiosError.response?.data,
-    });
-
+  } catch {
+    // Missing/expired token or unauthenticated requests are expected here.
+    // Return null without noisy console errors.
     return null;
   }
 }
@@ -225,7 +210,7 @@ export async function getUserProfileAction(): Promise<UserProfile | null> {
 export async function addAddressAction(payload: AddAddressPayload) {
   try {
     const axiosInstance = await getAxiosInstance();
-    
+
     const body =
       payload.type === "home"
         ? {
@@ -239,7 +224,7 @@ export async function addAddressAction(payload: AddAddressPayload) {
 
     const response = await axiosInstance.patch<ApiResponse<UserProfile>>(
       "/users/me",
-      body
+      body,
     );
 
     console.log("Address added/updated:", response.data);
@@ -256,7 +241,7 @@ export async function addAddressAction(payload: AddAddressPayload) {
     throw new Error(
       axiosError.response?.data?.message ||
         axiosError.message ||
-        "Failed to update address"
+        "Failed to update address",
     );
   }
 }
@@ -269,7 +254,7 @@ export async function updateProfileAction(payload: UpdateProfilePayload) {
     const axiosInstance = await getAxiosInstance();
     const response = await axiosInstance.patch<ApiResponse<UserProfile>>(
       "/users/me",
-      payload
+      payload,
     );
 
     console.log("Profile updated:", response.data);
@@ -286,7 +271,7 @@ export async function updateProfileAction(payload: UpdateProfilePayload) {
     throw new Error(
       axiosError.response?.data?.message ||
         axiosError.message ||
-        "Failed to update profile"
+        "Failed to update profile",
     );
   }
 }
@@ -308,8 +293,6 @@ export async function logoutAction() {
       message: axiosError.message,
     });
 
-    throw new Error(
-      axiosError.message || "Logout failed. Please try again."
-    );
+    throw new Error(axiosError.message || "Logout failed. Please try again.");
   }
 }
