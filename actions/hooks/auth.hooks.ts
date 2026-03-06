@@ -40,7 +40,7 @@ export const authKeys = {
  * Hook for getting current user navbar state with options support
  */
 export const useCurrentUser = (
-  options?: Omit<UseQueryOptions<AuthNavbarState>, "queryKey" | "queryFn">
+  options?: Omit<UseQueryOptions<AuthNavbarState>, "queryKey" | "queryFn">,
 ) => {
   return useQuery<AuthNavbarState>({
     queryKey: authKeys.navbarState,
@@ -51,19 +51,33 @@ export const useCurrentUser = (
   });
 };
 
-// actions/hooks/auth.hooks.ts - useUserProfile 
+// actions/hooks/auth.hooks.ts - useUserProfile
 
 /**
  * Hook for getting full user profile with options support
  */
+// export const useUserProfile = (
+//   options?: Omit<UseQueryOptions<UserProfile | null>, "queryKey" | "queryFn">,
+// ) => {
+//   return useQuery<UserProfile | null>({
+//     queryKey: authKeys.profile,
+//     queryFn: getUserProfileAction,
+//     staleTime: 1000 * 60 * 5, // 5 minutes
+//     retry: false,
+//     ...options,
+//   });
+// };
 export const useUserProfile = (
-  options?: Omit<UseQueryOptions<UserProfile | null>, "queryKey" | "queryFn">
+  options?: Omit<UseQueryOptions<UserProfile | null>, "queryKey" | "queryFn">,
 ) => {
   return useQuery<UserProfile | null>({
     queryKey: authKeys.profile,
     queryFn: getUserProfileAction,
-    staleTime: 1000 * 60 * 5, // 5 minutes
+    staleTime: 1000 * 30, // reduce to 30 seconds (or 0 for always stale)
+    gcTime: 1000 * 60 * 5, // garbage collection after 5 min
     retry: false,
+    refetchOnWindowFocus: true, // ← refetch when user returns to tab
+    refetchOnMount: true, // ← refetch when component mounts
     ...options,
   });
 };
@@ -76,7 +90,7 @@ export const useUserProfile = (
  * Login mutation hook
  */
 export const useLoginMutation = (
-  options?: UseMutationOptions<ApiResponse<LoginData>, Error, LoginPayload>
+  options?: UseMutationOptions<ApiResponse<LoginData>, Error, LoginPayload>,
 ) => {
   const queryClient = useQueryClient();
 
@@ -86,7 +100,7 @@ export const useLoginMutation = (
       // Invalidate and refetch user queries
       queryClient.invalidateQueries({ queryKey: authKeys.navbarState });
       queryClient.invalidateQueries({ queryKey: authKeys.profile });
-      
+
       // Call the original onSuccess if provided
       if (options?.onSuccess) {
         options.onSuccess(data, variables, onMutateResult, context);
@@ -106,7 +120,7 @@ export const useLoginMutation = (
  * Register mutation hook
  */
 export const useRegisterMutation = (
-  options?: UseMutationOptions<ApiResponse<unknown>, Error, RegisterPayload>
+  options?: UseMutationOptions<ApiResponse<unknown>, Error, RegisterPayload>,
 ) => {
   return useMutation({
     mutationFn: registerAction,
@@ -124,7 +138,7 @@ export const useRegisterMutation = (
  * Logout mutation hook
  */
 export const useLogoutMutation = (
-  options?: UseMutationOptions<{ success: boolean }, Error, void>
+  options?: UseMutationOptions<{ success: boolean }, Error, void>,
 ) => {
   const queryClient = useQueryClient();
 
@@ -134,14 +148,90 @@ export const useLogoutMutation = (
       // Clear all user related queries
       queryClient.removeQueries({ queryKey: authKeys.navbarState });
       queryClient.removeQueries({ queryKey: authKeys.profile });
-      
+
       // Also invalidate to trigger refetch if needed
       queryClient.invalidateQueries({ queryKey: authKeys.all });
-      
+
       if (options?.onSuccess) {
         options.onSuccess(data, variables, onMutateResult, context);
       }
     },
+    ...options,
+  });
+};
+
+//   options?: UseMutationOptions<
+//     ApiResponse<UserProfile>,
+//     Error,
+//     AddAddressPayload
+//   >,
+// ) => {
+//   const queryClient = useQueryClient();
+
+//   return useMutation({
+//     mutationFn: addAddressAction,
+//     onSuccess: (data, variables, onMutateResult, context) => {
+//       // Just invalidate and let React Query refetch
+//       queryClient.invalidateQueries({ queryKey: authKeys.profile });
+
+//       if (options?.onSuccess) {
+//         options.onSuccess(data, variables, onMutateResult, context);
+//       }
+//     },
+//     ...options,
+//   });
+// };
+/**
+ * Update profile mutation hook
+ */
+
+export const useUpdateProfileMutation = (
+  options?: UseMutationOptions<
+    ApiResponse<UserProfile>,
+    Error,
+    UpdateProfilePayload
+  >,
+) => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: updateProfileAction,
+
+    onMutate: async (
+      variables: UpdateProfilePayload,
+    ): Promise<{ previousProfile: UserProfile | null | undefined }> => {
+      await queryClient.cancelQueries({ queryKey: authKeys.profile });
+      const previousProfile = queryClient.getQueryData<UserProfile | null>(
+        authKeys.profile,
+      );
+
+      queryClient.setQueryData<UserProfile | null>(authKeys.profile, (old) => {
+        if (!old) return old;
+        return { ...old, ...variables };
+      });
+
+      return { previousProfile };
+    },
+
+    onSuccess: (response) => {
+      queryClient.setQueryData(authKeys.profile, response.data);
+      queryClient.invalidateQueries({ queryKey: authKeys.profile });
+      queryClient.invalidateQueries({ queryKey: authKeys.navbarState });
+    },
+
+    // Accept context as unknown, then safely assert/type guard
+    onError: (context: unknown) => {
+      // Type guard / assertion – safe and clean
+      if (
+        context &&
+        typeof context === "object" &&
+        "previousProfile" in context &&
+        context.previousProfile !== undefined
+      ) {
+        queryClient.setQueryData(authKeys.profile, context.previousProfile);
+      }
+    },
+
     ...options,
   });
 };
@@ -150,58 +240,78 @@ export const useLogoutMutation = (
  * Add address mutation hook
  */
 export const useAddAddressMutation = (
-  options?: UseMutationOptions<ApiResponse<UserProfile>, Error, AddAddressPayload>
+  options?: UseMutationOptions<
+    ApiResponse<UserProfile>,
+    Error,
+    AddAddressPayload
+  >,
 ) => {
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: addAddressAction,
-    onSuccess: (data, variables, onMutateResult, context) => {
-      // Update profile cache with new data
-      queryClient.setQueryData(authKeys.profile, data.data);
+
+    onMutate: async (
+      variables: AddAddressPayload,
+    ): Promise<{ previousProfile: UserProfile | null | undefined }> => {
+      await queryClient.cancelQueries({ queryKey: authKeys.profile });
+      const previousProfile = queryClient.getQueryData<UserProfile | null>(
+        authKeys.profile,
+      );
+
+      queryClient.setQueryData<UserProfile | null>(authKeys.profile, (old) => {
+        if (!old) return old;
+        if (variables.type === "home") {
+          return {
+            ...old,
+            homeAddress: variables.address?.trim() || "",
+            homePhone: variables.phone?.trim() || "",
+          };
+        }
+        if (variables.type === "office") {
+          return {
+            ...old,
+            officeAddress: variables.address?.trim() || "",
+            officePhone: variables.phone?.trim() || "",
+          };
+        }
+        return old;
+      });
+
+      return { previousProfile };
+    },
+
+    onSuccess: (response) => {
+      queryClient.setQueryData(authKeys.profile, response.data);
       queryClient.invalidateQueries({ queryKey: authKeys.profile });
-      
-      if (options?.onSuccess) {
-        options.onSuccess(data, variables, onMutateResult, context);
+      queryClient.invalidateQueries({ queryKey: authKeys.navbarState });
+    },
+
+    // Fixed: Accept context as unknown + type guard
+    onError: (err, variables, onMutateResult, context: unknown) => {
+      if (
+        context &&
+        typeof context === "object" &&
+        "previousProfile" in context &&
+        context.previousProfile !== undefined
+      ) {
+        queryClient.setQueryData(authKeys.profile, context.previousProfile);
       }
     },
+
     ...options,
   });
 };
-
-/**
- * Update profile mutation hook
- */
-export const useUpdateProfileMutation = (
-  options?: UseMutationOptions<ApiResponse<UserProfile>, Error, UpdateProfilePayload>
-) => {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: updateProfileAction,
-    onSuccess: (data, variables, onMutateResult, context) => {
-      // Update profile cache with new data
-      queryClient.setQueryData(authKeys.profile, data.data);
-      queryClient.invalidateQueries({ queryKey: authKeys.profile });
-      
-      if (options?.onSuccess) {
-        options.onSuccess(data, variables, onMutateResult, context);
-      }
-    },
-    ...options,
-  });
-};
-
 // ============================================================================
-// COMBINED HOOK (Optional - if you want all in one)
+// COMBINED HOOK
 // ============================================================================
 
 export const useAuth = () => {
   const queryClient = useQueryClient();
-  
+
   const currentUserQuery = useCurrentUser();
   const userProfileQuery = useUserProfile();
-  
+
   const loginMutation = useLoginMutation();
   const registerMutation = useRegisterMutation();
   const logoutMutation = useLogoutMutation();
@@ -234,7 +344,7 @@ export const useAuth = () => {
     // Utilities
     refetchAll,
     clearCache,
-    
+
     // Individual query states (if needed)
     queries: {
       currentUser: currentUserQuery,
