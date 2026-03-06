@@ -1,20 +1,21 @@
 "use client";
 
-
-
 import { CreateSubscription } from "@/services/subscription";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
-interface SubscriptionData {
-
-  id?: string;
-
+// Define the response type of your API
+interface SubscriptionResponse {
+  success: boolean;
+  message: string;
+  data: {
+    checkoutSessionUrl: string;
+  };
 }
 
 export const useSubscriptionMutations = () => {
   const queryClient = useQueryClient();
 
-  const createMutation = useMutation<any, Error, void>({
+  const createMutation = useMutation<SubscriptionResponse, Error, void>({
     mutationFn: CreateSubscription,
 
     onSuccess: () => {
@@ -25,18 +26,12 @@ export const useSubscriptionMutations = () => {
     onError: (error) => {
       console.error("Failed to create subscription:", error.message);
     },
-
-
-    onSettled: () => {
-
-    },
   });
 
   return {
-
     createMutation,
-    
 
+    // shortcut methods
     createSubscription: createMutation.mutate,
     createSubscriptionAsync: createMutation.mutateAsync,
 
