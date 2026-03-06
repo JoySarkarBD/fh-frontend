@@ -1,12 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import Link from "next/link";
+import { useCurrentUser } from "@/actions/hooks/auth.hooks";
+import type { AuthNavbarState } from "@/services/auth";
+import { Bell, Menu, User, User2, X } from "lucide-react";
 import Image from "next/image";
-import { Menu, X, Bell, User, User2 } from "lucide-react";
-import { useRouter } from "next/navigation";
-import { usePathname } from "next/navigation";
-import type { AuthNavbarState } from "@/actions/auth.action";
+import Link from "next/link";
+import { usePathname, useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 
 const navItems = [
   { label: "Properties", href: "/properties" },
@@ -27,16 +27,25 @@ export default function NavbarClient({ initialAuthState }: NavbarClientProps) {
   const pathname = usePathname();
   const router = useRouter();
 
-  const [authState, setAuthState] = useState<AuthNavbarState>(initialAuthState);
+  // TanStack Query with initial data from server
+  const { 
+    data: authState, 
+    refetch 
+  } = useCurrentUser({
+    initialData: initialAuthState,
+  });
 
+  // Refetch on mount to ensure fresh data
   useEffect(() => {
-    setAuthState(initialAuthState);
-  }, [initialAuthState]);
+    refetch();
+  }, [refetch]);
+
+  console.log(authState, 'user data');
 
   const profilePath =
-    authState.userRole === "admin" ? "/admin" : "/dashboard/profile";
+    authState?.userRole === "admin" ? "/admin" : "/dashboard/profile";
   const dashboardLabel =
-    authState.userRole === "admin" ? "Admin Dashboard" : "Dashboard";
+    authState?.userRole === "admin" ? "Admin Dashboard" : "Dashboard";
   const isUserDashboardRoute = pathname.startsWith("/dashboard");
 
   const openUserDashboardSidebar = () => {
@@ -96,7 +105,7 @@ export default function NavbarClient({ initialAuthState }: NavbarClientProps) {
           </nav>
 
           <div className='hidden lg:flex items-center gap-4'>
-            {!authState.isLoggedIn ? (
+            {!authState?.isLoggedIn ? (
               <>
                 <Link
                   href='/login'
@@ -127,7 +136,7 @@ export default function NavbarClient({ initialAuthState }: NavbarClientProps) {
           </div>
 
           <div className='flex items-center gap-3 lg:hidden'>
-            {authState.isLoggedIn && (
+            {authState?.isLoggedIn && (
               <button
                 onClick={() => {
                   if (isUserDashboardRoute) {
@@ -175,7 +184,7 @@ export default function NavbarClient({ initialAuthState }: NavbarClientProps) {
                 );
               })}
 
-              {!authState.isLoggedIn && (
+              {!authState?.isLoggedIn && (
                 <div className='mt-6 pt-6 border-t border-gray-200 flex flex-col gap-4'>
                   <Link
                     href='/login'
@@ -193,7 +202,7 @@ export default function NavbarClient({ initialAuthState }: NavbarClientProps) {
                 </div>
               )}
 
-              {authState.isLoggedIn && (
+              {authState?.isLoggedIn && (
                 <div className='mt-6 pt-6 border-t border-gray-200 flex flex-col gap-4'>
                   <Link
                     href={profilePath}

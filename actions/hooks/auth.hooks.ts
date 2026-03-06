@@ -1,27 +1,28 @@
 // actions/hooks/auth.hooks.ts
+import type { ApiResponse } from "@/lib/api";
 import {
-  useMutation,
-  useQuery,
-  useQueryClient,
-  UseMutationOptions,
-} from "@tanstack/react-query";
-import {
-  loginAction,
-  registerAction,
-  logoutAction,
+  addAddressAction,
   getCurrentUserFromTokenAction,
   getUserProfileAction,
-  addAddressAction,
+  loginAction,
+  LoginData,
+  logoutAction,
+  registerAction,
   updateProfileAction,
+  type AddAddressPayload,
+  type AuthNavbarState,
   type LoginPayload,
   type RegisterPayload,
-  type AddAddressPayload,
   type UpdateProfilePayload,
-  type AuthNavbarState,
-  LoginData,
-} from "@/actions/auth.action";
+} from "@/services/auth";
 import type { UserProfile } from "@/types/user";
-import type { ApiResponse } from "@/lib/api";
+import {
+  useMutation,
+  UseMutationOptions,
+  useQuery,
+  useQueryClient,
+  UseQueryOptions,
+} from "@tanstack/react-query";
 
 // Query Keys
 export const authKeys = {
@@ -36,26 +37,34 @@ export const authKeys = {
 // ============================================================================
 
 /**
- * Hook for getting current user navbar state
+ * Hook for getting current user navbar state with options support
  */
-export const useCurrentUser = () => {
+export const useCurrentUser = (
+  options?: Omit<UseQueryOptions<AuthNavbarState>, "queryKey" | "queryFn">
+) => {
   return useQuery<AuthNavbarState>({
     queryKey: authKeys.navbarState,
     queryFn: getCurrentUserFromTokenAction,
     staleTime: 1000 * 60 * 5, // 5 minutes
     retry: false,
+    ...options,
   });
 };
 
+// actions/hooks/auth.hooks.ts - useUserProfile 
+
 /**
- * Hook for getting full user profile
+ * Hook for getting full user profile with options support
  */
-export const useUserProfile = () => {
+export const useUserProfile = (
+  options?: Omit<UseQueryOptions<UserProfile | null>, "queryKey" | "queryFn">
+) => {
   return useQuery<UserProfile | null>({
     queryKey: authKeys.profile,
     queryFn: getUserProfileAction,
     staleTime: 1000 * 60 * 5, // 5 minutes
     retry: false,
+    ...options,
   });
 };
 
@@ -67,23 +76,27 @@ export const useUserProfile = () => {
  * Login mutation hook
  */
 export const useLoginMutation = (
-  options?: UseMutationOptions<ApiResponse<LoginData | null>, Error, LoginPayload>
+  options?: UseMutationOptions<ApiResponse<LoginData>, Error, LoginPayload>
 ) => {
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: loginAction,
-    onSuccess: (data, variables, context) => {
+    onSuccess: (data, variables, onMutateResult, context) => {
       // Invalidate and refetch user queries
       queryClient.invalidateQueries({ queryKey: authKeys.navbarState });
       queryClient.invalidateQueries({ queryKey: authKeys.profile });
       
       // Call the original onSuccess if provided
-      options?.onSuccess?.(data, variables, context );
+      if (options?.onSuccess) {
+        options.onSuccess(data, variables, onMutateResult, context);
+      }
     },
-    onError: (error, variables, context) => {
+    onError: (error, variables, onMutateResult, context) => {
       console.error("Login failed:", error);
-      options?.onError?.(error, variables, context);
+      if (options?.onError) {
+        options.onError(error, variables, onMutateResult, context);
+      }
     },
     ...options,
   });
@@ -97,9 +110,11 @@ export const useRegisterMutation = (
 ) => {
   return useMutation({
     mutationFn: registerAction,
-    onError: (error, variables, context) => {
+    onError: (error, variables, onMutateResult, context) => {
       console.error("Registration failed:", error);
-      options?.onError?.(error, variables, context);
+      if (options?.onError) {
+        options.onError(error, variables, onMutateResult, context);
+      }
     },
     ...options,
   });
@@ -115,7 +130,7 @@ export const useLogoutMutation = (
 
   return useMutation({
     mutationFn: logoutAction,
-    onSuccess: (data, variables, context) => {
+    onSuccess: (data, variables, onMutateResult, context) => {
       // Clear all user related queries
       queryClient.removeQueries({ queryKey: authKeys.navbarState });
       queryClient.removeQueries({ queryKey: authKeys.profile });
@@ -123,7 +138,9 @@ export const useLogoutMutation = (
       // Also invalidate to trigger refetch if needed
       queryClient.invalidateQueries({ queryKey: authKeys.all });
       
-      options?.onSuccess?.(data, variables, context);
+      if (options?.onSuccess) {
+        options.onSuccess(data, variables, onMutateResult, context);
+      }
     },
     ...options,
   });
@@ -139,12 +156,14 @@ export const useAddAddressMutation = (
 
   return useMutation({
     mutationFn: addAddressAction,
-    onSuccess: (data, variables, context) => {
+    onSuccess: (data, variables, onMutateResult, context) => {
       // Update profile cache with new data
       queryClient.setQueryData(authKeys.profile, data.data);
       queryClient.invalidateQueries({ queryKey: authKeys.profile });
       
-      options?.onSuccess?.(data, variables, context);
+      if (options?.onSuccess) {
+        options.onSuccess(data, variables, onMutateResult, context);
+      }
     },
     ...options,
   });
@@ -160,12 +179,14 @@ export const useUpdateProfileMutation = (
 
   return useMutation({
     mutationFn: updateProfileAction,
-    onSuccess: (data, variables, context) => {
+    onSuccess: (data, variables, onMutateResult, context) => {
       // Update profile cache with new data
       queryClient.setQueryData(authKeys.profile, data.data);
       queryClient.invalidateQueries({ queryKey: authKeys.profile });
       
-      options?.onSuccess?.(data, variables, context);
+      if (options?.onSuccess) {
+        options.onSuccess(data, variables, onMutateResult, context);
+      }
     },
     ...options,
   });

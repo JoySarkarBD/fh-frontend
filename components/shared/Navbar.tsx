@@ -1,13 +1,15 @@
+// components/Navbar/index.tsx
 import {
   getCurrentUserFromTokenAction,
   type AuthNavbarState,
-} from "@/actions/auth.action";
+} from "@/services/auth";
 import NavbarClient from "./NavbarClient";
 
 export default async function Navbar() {
   let initialAuthState: AuthNavbarState = {
     isLoggedIn: false,
     userRole: "user",
+    isSubscribed: false
   };
 
   try {
@@ -16,6 +18,7 @@ export default async function Navbar() {
     initialAuthState = {
       isLoggedIn: false,
       userRole: "user",
+      isSubscribed:false
     };
   }
 

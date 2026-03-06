@@ -4,7 +4,7 @@ import { useSubscriptionMutations } from "@/actions/hooks/subscripiton.hooks";
 import React, { useEffect } from "react";
 
 interface SubscriptionButtonProps {
-  status: "active" | "inactive";
+  status: string
   text: string;
 }
 

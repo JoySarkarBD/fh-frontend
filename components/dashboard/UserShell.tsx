@@ -1,10 +1,10 @@
 "use client";
 
+import { useCurrentUser, useLogoutMutation } from "@/actions/hooks/auth.hooks";
 import { ChevronDown, ChevronUp, FileText, LogOut, X } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { ReactNode, useEffect, useMemo, useState } from "react";
-import { logoutAction } from "@/actions/auth.action";
 import { BiHomeAlt } from "react-icons/bi";
 import { CgCalculator } from "react-icons/cg";
 import { FaRegBookmark } from "react-icons/fa6";
@@ -33,11 +33,30 @@ type NavItem = {
 export default function UserShell({ children }: UserShellProps) {
   const pathname = usePathname();
   const router = useRouter();
-  const [dashboardPlan] = useState("subscribed");
   const [currentHash, setCurrentHash] = useState("");
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const [expandedItems, setExpandedItems] = useState<Record<string, boolean>>({
     "/dashboard/profile": true,
+  });
+
+  // Get current user data
+  const { 
+    data: authState,
+    isLoading 
+  } = useCurrentUser();
+
+  // Check if user is subscribed (you need to adjust this based on your actual data structure)
+  const isSubscribed = authState?.isSubscribed ?? false;
+
+  // Logout mutation
+  const logoutMutation = useLogoutMutation({
+    onSuccess: () => {
+      try {
+        localStorage.setItem("isLoggedIn", "false");
+        localStorage.removeItem("userRole");
+      } catch {}
+      router.push("/");
+    },
   });
 
   useEffect(() => {
@@ -58,8 +77,6 @@ export default function UserShell({ children }: UserShellProps) {
 
     const hash = window.location.hash || "";
 
-    // Defer state update to avoid synchronous setState inside effect
-    // which can cause cascading renders.
     setTimeout(() => setCurrentHash(hash), 0);
 
     if (hash && pathname === "/dashboard/profile") {
@@ -112,7 +129,8 @@ export default function UserShell({ children }: UserShellProps) {
       },
     ];
 
-    if (dashboardPlan === "subscribed") {
+    // Add Message item only if user is subscribed
+    if (isSubscribed) {
       profileItems.splice(1, 0, {
         label: "Message",
         href: "/dashboard/profile/message",
@@ -124,13 +142,15 @@ export default function UserShell({ children }: UserShellProps) {
       label: "Profile Overview",
       items: profileItems,
     };
-  }, [dashboardPlan]);
+  }, [isSubscribed]);
 
   const sections = useMemo(() => {
-    if (dashboardPlan === "free") {
+    // If not subscribed, show only Profile Overview section
+    if (!isSubscribed) {
       return [profileOverviewSection];
     }
 
+    // If subscribed, show all sections
     return [
       {
         label: "Main",
@@ -184,16 +204,10 @@ export default function UserShell({ children }: UserShellProps) {
       },
       profileOverviewSection,
     ];
-  }, [dashboardPlan, profileOverviewSection]);
+  }, [isSubscribed, profileOverviewSection]);
 
-  const handleLogout = async () => {
-    await logoutAction();
-
-    try {
-      localStorage.setItem("isLoggedIn", "false");
-      localStorage.removeItem("userRole");
-    } catch {}
-    router.push("/");
+  const handleLogout = () => {
+    logoutMutation.mutate();
   };
 
   const toggleExpanded = (href: string) => {
@@ -201,7 +215,6 @@ export default function UserShell({ children }: UserShellProps) {
       if (prev[href]) {
         return {};
       }
-
       return { [href]: true };
     });
   };
@@ -216,6 +229,30 @@ export default function UserShell({ children }: UserShellProps) {
     window.history.pushState(null, "", `${href}${hash}`);
     window.dispatchEvent(new HashChangeEvent("hashchange"));
   };
+
+  // Loading state
+  if (isLoading) {
+    return (
+      <div className='md:mx-12.5 px-6 lg:px-8 py-13'>
+        <div className='flex flex-col md:grid md:grid-cols-12 gap-10'>
+          <aside className='hidden md:block md:col-span-3'>
+            <div className='md:sticky md:top-26 md:h-[calc(100vh-7rem)] border border-[#D1CEC6] rounded-lg p-4 flex flex-col'>
+              <div className='animate-pulse space-y-4'>
+                <div className='h-4 bg-gray-200 rounded w-3/4'></div>
+                <div className='h-4 bg-gray-200 rounded w-1/2'></div>
+                <div className='h-4 bg-gray-200 rounded w-2/3'></div>
+              </div>
+            </div>
+          </aside>
+          <main className='md:col-span-9 min-w-0'>
+            <div className='animate-pulse'>
+              <div className='h-64 bg-gray-200 rounded'></div>
+            </div>
+          </main>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className='md:mx-12.5 px-6 lg:px-8 py-13'>
@@ -324,9 +361,10 @@ export default function UserShell({ children }: UserShellProps) {
 
             <button
               onClick={handleLogout}
-              className='mt-4 flex items-center gap-2 rounded-md px-3 py-2 text-sm text-red-500 hover:bg-red-50 transition-colors'>
+              disabled={logoutMutation.isPending}
+              className='mt-4 flex items-center gap-2 rounded-md px-3 py-2 text-sm text-red-500 hover:bg-red-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed'>
               <LogOut size={17} />
-              Logout
+              {logoutMutation.isPending ? "Logging out..." : "Logout"}
             </button>
           </div>
         </aside>
@@ -456,9 +494,10 @@ export default function UserShell({ children }: UserShellProps) {
 
             <button
               onClick={handleLogout}
-              className='mt-4 flex items-center gap-2 rounded-md px-3 py-2 text-sm text-red-500 hover:bg-red-50 transition-colors'>
+              disabled={logoutMutation.isPending}
+              className='mt-4 flex items-center gap-2 rounded-md px-3 py-2 text-sm text-red-500 hover:bg-red-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed'>
               <LogOut size={17} />
-              Logout
+              {logoutMutation.isPending ? "Logging out..." : "Logout"}
             </button>
           </aside>
         </div>

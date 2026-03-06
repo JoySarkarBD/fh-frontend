@@ -14,7 +14,6 @@ import {
   User,
   X,
 } from "lucide-react";
-import { logoutAction } from "@/actions/auth.action";
 import { IoMdCode } from "react-icons/io";
 import {
   LuBadgePercent,
@@ -25,6 +24,7 @@ import {
   LuUserRoundCog,
 } from "react-icons/lu";
 import { FiHome } from "react-icons/fi";
+import { useLogoutMutation } from "@/actions/hooks/auth.hooks";
 
 type AdminShellProps = {
   children: ReactNode;
@@ -112,6 +112,17 @@ export default function AdminShell({ children }: AdminShellProps) {
     {},
   );
 
+  // Logout mutation
+  const logoutMutation = useLogoutMutation({
+    onSuccess: () => {
+      try {
+        localStorage.setItem("isLoggedIn", "false");
+        localStorage.removeItem("userRole");
+      } catch {}
+      router.push("/");
+    },
+  });
+
   const toggleExpanded = (href: string) => {
     setExpandedItems((prev) => {
       if (prev[href]) {
@@ -146,14 +157,8 @@ export default function AdminShell({ children }: AdminShellProps) {
     };
   }, []);
 
-  const handleLogout = async () => {
-    await logoutAction();
-
-    try {
-      localStorage.setItem("isLoggedIn", "false");
-      localStorage.removeItem("userRole");
-    } catch {}
-    router.push("/");
+  const handleLogout = () => {
+    logoutMutation.mutate();
   };
 
   const renderNavItems = (mobile = false) => {
@@ -277,11 +282,14 @@ export default function AdminShell({ children }: AdminShellProps) {
         {/* Logout at bottom */}
         <button
           onClick={handleLogout}
-          className={`mt-4 flex items-center gap-3 rounded-md px-3 py-2 text-sm text-red-500 hover:bg-red-50 transition-colors ${
+          disabled={logoutMutation.isPending}
+          className={`mt-4 flex items-center gap-3 rounded-md px-3 py-2 text-sm text-red-500 hover:bg-red-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
             !isExpanded ? "justify-center px-2" : "justify-start"
           }`}>
           <LogOut size={18} className='shrink-0' />
-          {isExpanded && <span>Logout</span>}
+          {isExpanded && (
+            <span>{logoutMutation.isPending ? "Logging out..." : "Logout"}</span>
+          )}
         </button>
       </div>
     );
