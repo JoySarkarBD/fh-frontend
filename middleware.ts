@@ -47,11 +47,11 @@ export async function middleware(req: NextRequest) {
   }
 
   const token = req.cookies.get("accessToken")?.value;
-  
+
   // Get basic info from JWT first (fast)
   const payload = token ? await verifyJwt(token) : null;
   const isAuthenticated = Boolean(payload);
-  
+
   // Initialize default values
   let userRole = String(payload?.role ?? "").toLowerCase();
   let isSubscribed = false;
@@ -62,20 +62,21 @@ export async function middleware(req: NextRequest) {
       // Create a request-like object for the server action
       // We need to pass the token since middleware runs on edge
       const userState = await getCurrentUserFromTokenAction();
-      console.log(userState, 'user state ge');
+      console.log(userState, "user state ge");
       userRole = userState.userRole;
       isSubscribed = userState.isSubscribed;
     } catch (error) {
       console.error("Failed to fetch user state in middleware:", error);
       // Fallback to JWT data if available
-      isSubscribed = 
+      // isSubscribed = payload?.isSubscribed === true;
+      isSubscribed =
         payload?.isSubscribed === true ||
         payload?.subscribed === true ||
         String(payload?.subscription ?? "").toLowerCase() === "premium";
     }
   }
 
-  console.log({ isAuthenticated, userRole, isSubscribed }, 'middleware state');
+  console.log({ isAuthenticated, userRole, isSubscribed }, "middleware state");
 
   // Public pages - allow access
   if (publicPages.includes(pathname)) {

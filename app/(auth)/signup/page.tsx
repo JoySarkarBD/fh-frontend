@@ -64,7 +64,10 @@ export default function SignupPage() {
       return "Please agree to the terms to continue.";
     }
     if (registerMutation.isError) {
-      return registerMutation.error?.message || "Registration failed. Please try again.";
+      return (
+        registerMutation.error?.message ||
+        "Registration failed. Please try again."
+      );
     }
     return "";
   };
@@ -86,7 +89,7 @@ export default function SignupPage() {
           priority
         />
       </div>
-      
+
       {/* Logo */}
       <div className='absolute top-6 left-6 flex items-center gap-2'>
         <Image
@@ -255,14 +258,19 @@ export default function SignupPage() {
         {/* Success Message */}
         {registerMutation.isSuccess && (
           <p className='mb-4 text-sm text-green-600'>
-            {registerMutation.data?.message || "Registration successful! Redirecting to login..."}
+            {registerMutation.data?.message ||
+              "Registration successful! Redirecting to login..."}
           </p>
         )}
 
         {/* Sign Up Button */}
         <button
           type='submit'
-          disabled={registerMutation.isPending || !agreed || password !== confirmPassword}
+          disabled={
+            registerMutation.isPending ||
+            !agreed ||
+            password !== confirmPassword
+          }
           className='w-full px-6 py-2.5 bg-[#619B7F] text-xl text-white rounded-lg hover:bg-[#3a6a50] transition-colors duration-300 cursor-pointer disabled:cursor-not-allowed disabled:opacity-70'>
           {registerMutation.isPending ? "Signing up..." : "Sign up"}
         </button>
@@ -277,7 +285,7 @@ export default function SignupPage() {
         {/* Social Buttons */}
         <div className='flex justify-center gap-5 mb-6'>
           {/* Google */}
-          <button 
+          <button
             type='button'
             className='w-10 h-10 rounded-full flex items-center justify-center hover:opacity-80 transition-opacity'
             disabled={registerMutation.isPending}>
@@ -301,7 +309,7 @@ export default function SignupPage() {
             </svg>
           </button>
           {/* Facebook */}
-          <button 
+          <button
             type='button'
             className='w-10 h-10 rounded-full flex items-center justify-center hover:opacity-80 transition-opacity'
             disabled={registerMutation.isPending}>
@@ -310,7 +318,7 @@ export default function SignupPage() {
             </svg>
           </button>
           {/* Apple */}
-          <button 
+          <button
             type='button'
             className='w-10 h-10 rounded-full flex items-center justify-center hover:opacity-80 transition-opacity'
             disabled={registerMutation.isPending}>

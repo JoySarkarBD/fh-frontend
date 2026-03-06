@@ -295,6 +295,3 @@ export async function logoutAction() {
     throw new Error(axiosError.message || "Logout failed. Please try again.");
   }
 }
-
-// Get All users (Admin only)
-export async function getAllUsersAction() {}
