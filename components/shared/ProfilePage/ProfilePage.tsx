@@ -12,8 +12,12 @@ import {
   FiTrash2,
 } from "react-icons/fi";
 
-import { addAddressAction, updateProfileAction } from "@/actions/auth.action";
 import type { UserProfile, UserAddress } from "@/types/user";
+import {
+  useUserProfile,
+  useUpdateProfileMutation,
+  useAddAddressMutation,
+} from "@/actions/hooks/auth.hooks";
 
 type ProfilePageProps = {
   initialProfile?: UserProfile | null;
@@ -22,24 +26,40 @@ type ProfilePageProps = {
 const ProfilePage: React.FC<ProfilePageProps> = ({ initialProfile }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [profileImage, setProfileImage] = useState<string | null>(null);
-  const [profileData, setProfileData] = useState<UserProfile | null>(
-    initialProfile ?? null,
-  );
+
+  // TanStack Query hooks
+  const { data: profileData } = useUserProfile({
+    initialData: initialProfile,
+  });
+
+  const updateProfileMutation = useUpdateProfileMutation({
+    onSuccess: () => {
+      setIsEditing(false);
+    },
+  });
+
+  const addAddressMutation = useAddAddressMutation({
+    onSuccess: () => {
+      setShowAddModal(false);
+      setAddLine1("");
+      setAddPhone("");
+      setAddType("home");
+    },
+  });
 
   // Add modal state
   const [showAddModal, setShowAddModal] = useState(false);
   const [addType, setAddType] = useState<"home" | "office">("home");
   const [addLine1, setAddLine1] = useState<string>("");
   const [addPhone, setAddPhone] = useState<string>("");
-  const [adding, setAdding] = useState(false);
   const [addError, setAddError] = useState<string>("");
 
-  const memberSince = useMemo(() => {
+  const memberSince = (() => {
     if (!profileData?.createdAt) return "-";
     const date = new Date(profileData.createdAt);
     if (Number.isNaN(date.getTime())) return "-";
     return date.toLocaleDateString();
-  }, [profileData?.createdAt]);
+  })();
 
   const addresses = useMemo<UserAddress[]>(() => {
     const list: UserAddress[] = [];
@@ -107,65 +127,57 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ initialProfile }) => {
 
   const saveProfile = async () => {
     try {
-      setAdding(true);
       setAddError("");
-      const response = await updateProfileAction({
+      updateProfileMutation.mutate({
         name: editName,
         phone: editPhone,
       });
-      setProfileData(response.data ?? profileData);
-      setIsEditing(false);
     } catch (err) {
       setAddError(
         err instanceof Error ? err.message : "Failed to save profile",
       );
-    } finally {
-      setAdding(false);
     }
   };
 
   const clearAddressField = async (type: "home" | "office") => {
     try {
-      setAdding(true);
-      const response = await addAddressAction({ type, address: "", phone: "" });
-      setProfileData(response.data ?? profileData);
+      addAddressMutation.mutate({ type, address: "", phone: "" });
     } catch (error) {
       setAddError(
         error instanceof Error ? error.message : "Failed to remove address",
       );
-    } finally {
-      setAdding(false);
     }
   };
 
   const handleAddDone = async () => {
     try {
-      setAdding(true);
       setAddError("");
 
-      const response = await addAddressAction({
+      addAddressMutation.mutate({
         type: addType,
         address: addLine1,
         phone: addPhone,
       });
-
-      setProfileData(response.data ?? profileData);
-      setShowAddModal(false);
-      setAddLine1("");
-      setAddPhone("");
-      setAddType("home");
     } catch (error) {
       setAddError(
         error instanceof Error ? error.message : "Failed to add address",
       );
-    } finally {
-      setAdding(false);
     }
   };
 
+  const isLoading = updateProfileMutation.isPending || addAddressMutation.isPending;
+
+  if (!profileData) {
+    return (
+      <div className='min-h-screen flex items-center justify-center'>
+        <p className='text-gray-500'>No profile data available.</p>
+      </div>
+    );
+  }
+
   return (
-    <div className='min-h-screen  '>
-      <div className=' mx-auto flex flex-col gap-5'>
+    <div className='min-h-screen'>
+      <div className='mx-auto flex flex-col gap-5'>
         {/* ── Profile Overview Card ── */}
         <div className='bg-white rounded-lg border border-[#D1CEC6] overflow-hidden'>
           {/* Header */}
@@ -184,14 +196,14 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ initialProfile }) => {
               <div className='flex items-center gap-2'>
                 <button
                   onClick={saveProfile}
-                  disabled={adding}
-                  className='flex items-center gap-1.5 text-sm font-medium px-4 py-2 rounded bg-[#619B7F] text-white'>
+                  disabled={isLoading}
+                  className='flex items-center gap-1.5 text-sm font-medium px-4 py-2 rounded bg-[#619B7F] text-white disabled:opacity-50'>
                   Save
                 </button>
                 <button
                   onClick={cancelEdit}
-                  disabled={adding}
-                  className='flex items-center gap-1.5 text-sm font-medium px-4 py-2 rounded bg-gray-200 text-[#1B1B1A]'>
+                  disabled={isLoading}
+                  className='flex items-center gap-1.5 text-sm font-medium px-4 py-2 rounded bg-gray-200 text-[#1B1B1A] disabled:opacity-50'>
                   Cancel
                 </button>
               </div>
@@ -205,7 +217,7 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ initialProfile }) => {
               <div
                 onClick={() => fileInputRef.current?.click()}
                 className='w-34 h-34 rounded-full overflow-hidden border-2 border-[#D1CEC6] cursor-pointer mb-1.5'>
-                <div>
+                <div className='relative w-full h-full'>
                   {profileImage ? (
                     <Image
                       src={profileImage}
@@ -221,32 +233,13 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ initialProfile }) => {
                       alt={profileData?.name ?? "Profile"}
                       width={500}
                       height={500}
+                      className='w-full h-full object-cover'
                     />
                   )}
-
-                  <FaCamera className='' size={12} />
+                  <div className='absolute bottom-0 right-0 bg-white rounded-full p-1 border border-[#D1CEC6]'>
+                    <FaCamera size={12} />
+                  </div>
                 </div>
-                {/* {profileImage ? (
-                  <div>
-                    <Image
-                      src='/user.png'
-                      alt='Profile'
-                      width={200}
-                      height={200}
-                    />
-
-                    <FaCamera className='' size={12} />
-                  </div>
-                ) : (
-                  <div
-                    className='w-full h-full flex items-center justify-center text-xl'
-                    style={{
-                      background:
-                        "linear-gradient(135deg, #f093fb 0%, #f5576c 50%, #4facfe 100%)",
-                    }}>
-                    👤
-                  </div>
-                )} */}
               </div>
               <input
                 ref={fileInputRef}
@@ -257,7 +250,7 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ initialProfile }) => {
               />
               <button
                 onClick={() => fileInputRef.current?.click()}
-                className=' text-black text-xl font-medium hover:underline'>
+                className='text-black text-xl font-medium hover:underline'>
                 Change Photo
               </button>
             </div>
@@ -272,13 +265,13 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ initialProfile }) => {
                   <input
                     value={profileData?.name ?? ""}
                     readOnly
-                    className='w-full border border-[#D1CEC6] rounded-lg px-3 py-2 text-sm text-[#70706C]  focus:outline-none focus:border-[#619B7F]'
+                    className='w-full border border-[#D1CEC6] rounded-lg px-3 py-2 text-sm text-[#70706C] focus:outline-none focus:border-[#619B7F]'
                   />
                 ) : (
                   <input
                     value={editName}
                     onChange={(e) => setEditName(e.target.value)}
-                    className='w-full border border-[#D1CEC6] rounded-lg px-3 py-2 text-sm text-[#70706C]  focus:outline-none focus:border-[#619B7F]'
+                    className='w-full border border-[#D1CEC6] rounded-lg px-3 py-2 text-sm text-[#70706C] focus:outline-none focus:border-[#619B7F]'
                   />
                 )}
               </div>
@@ -295,7 +288,7 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ initialProfile }) => {
                   <input
                     value={profileData?.email ?? ""}
                     readOnly
-                    className='w-full border border-[#D1CEC6] rounded-lg pl-7 pr-3 py-2 text-sm text-[#70706C]  focus:outline-none focus:border-[#619B7F]'
+                    className='w-full border border-[#D1CEC6] rounded-lg pl-7 pr-3 py-2 text-sm text-[#70706C] focus:outline-none focus:border-[#619B7F]'
                   />
                 </div>
               </div>
@@ -313,13 +306,13 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ initialProfile }) => {
                     <input
                       value={profileData?.phone ?? ""}
                       readOnly
-                      className='w-full border border-[#D1CEC6] rounded-lg pl-7 pr-3 py-2 text-sm text-[#70706C]  focus:outline-none focus:border-[#619B7F]'
+                      className='w-full border border-[#D1CEC6] rounded-lg pl-7 pr-3 py-2 text-sm text-[#70706C] focus:outline-none focus:border-[#619B7F]'
                     />
                   ) : (
                     <input
                       value={editPhone}
                       onChange={(e) => setEditPhone(e.target.value)}
-                      className='w-full border border-[#D1CEC6] rounded-lg pl-7 pr-3 py-2 text-sm text-[#70706C]  focus:outline-none focus:border-[#619B7F]'
+                      className='w-full border border-[#D1CEC6] rounded-lg pl-7 pr-3 py-2 text-sm text-[#70706C] focus:outline-none focus:border-[#619B7F]'
                     />
                   )}
                 </div>
@@ -344,7 +337,7 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ initialProfile }) => {
           id='profileAddress'
           className='bg-white font-medium text-[28px] rounded-lg border border-[#D1CEC6] overflow-hidden'>
           {/* Header */}
-          <div className='flex items-center justify-between px-5 py-3.5 '>
+          <div className='flex items-center justify-between px-5 py-3.5'>
             <span className='font-semibold text-[28px] text-gray-800'>
               Address
             </span>
@@ -353,9 +346,9 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ initialProfile }) => {
                 setShowAddModal(true);
                 setAddError("");
               }}
-              disabled={addresses.length >= 2}
+              disabled={addresses.length >= 2 || isLoading}
               className={`flex items-center gap-1.5 text-sm font-medium px-6 py-3 rounded transition-colors ${
-                addresses.length >= 2
+                addresses.length >= 2 || isLoading
                   ? "bg-gray-200 text-gray-500 cursor-not-allowed"
                   : "bg-[#619B7F] hover:bg-[#3d6b4a] text-white"
               }`}>
@@ -365,7 +358,7 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ initialProfile }) => {
           </div>
 
           {/* Address List */}
-          <div className=''>
+          <div>
             {addresses.length === 0 ? (
               <div className='px-5 py-6 text-sm text-gray-500'>
                 No addresses yet.
@@ -381,11 +374,6 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ initialProfile }) => {
                         <span className='font-semibold text-xl text-gray-800'>
                           {addr.type}
                         </span>
-                        {/* {addr.isDefault && (
-                          <span className='text-[14px] bg-[#F4F5F3] text-[#619B7F] rounded-3xl px-4 py-0.5'>
-                            Default
-                          </span>
-                        )} */}
                       </div>
                       <div className='flex items-start gap-1.5 mb-1.5'>
                         <FiMapPin
@@ -420,7 +408,8 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ initialProfile }) => {
                             setAddError("");
                             setShowAddModal(true);
                           }}
-                          className='flex items-center justify-center rounded-md p-1.5 text-[#1B1B1A] hover:bg-gray-50 transition-colors'>
+                          disabled={isLoading}
+                          className='flex items-center justify-center rounded-md p-1.5 text-[#1B1B1A] hover:bg-gray-50 transition-colors disabled:opacity-50'>
                           <FiEdit2 size={13} />
                         </button>
 
@@ -432,8 +421,8 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ initialProfile }) => {
                                 : "office",
                             )
                           }
-                          className='flex items-center justify-center rounded-md p-1.5 text-[#E24949] hover:border-red-200 hover:text-red-500 transition-colors'
-                          disabled={adding}>
+                          disabled={isLoading}
+                          className='flex items-center justify-center rounded-md p-1.5 text-[#E24949] hover:border-red-200 hover:text-red-500 transition-colors disabled:opacity-50'>
                           <FiTrash2 size={13} />
                         </button>
                       </div>
@@ -445,6 +434,7 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ initialProfile }) => {
           </div>
         </div>
 
+        {/* Add Address Modal */}
         {showAddModal && (
           <div className='fixed inset-0 z-50 flex items-center justify-center bg-black/40'>
             <div className='bg-white rounded-lg p-6 w-full max-w-md'>
@@ -454,12 +444,22 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ initialProfile }) => {
               <div className='flex border border-[#D1CEC6] rounded-md overflow-hidden mb-4'>
                 <button
                   onClick={() => setAddType("home")}
-                  className={`flex-1 py-2 text-sm ${addType === "home" ? "bg-[#619B7F] text-white" : "bg-white text-[#1B1B1A]"}`}>
+                  disabled={isLoading}
+                  className={`flex-1 py-2 text-sm ${
+                    addType === "home"
+                      ? "bg-[#619B7F] text-white"
+                      : "bg-white text-[#1B1B1A]"
+                  } disabled:opacity-50`}>
                   Home
                 </button>
                 <button
                   onClick={() => setAddType("office")}
-                  className={`flex-1 py-2 text-sm ${addType === "office" ? "bg-[#619B7F] text-white" : "bg-white text-[#1B1B1A]"}`}>
+                  disabled={isLoading}
+                  className={`flex-1 py-2 text-sm ${
+                    addType === "office"
+                      ? "bg-[#619B7F] text-white"
+                      : "bg-white text-[#1B1B1A]"
+                  } disabled:opacity-50`}>
                   Office
                 </button>
               </div>
@@ -472,7 +472,8 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ initialProfile }) => {
                 <input
                   value={addLine1}
                   onChange={(e) => setAddLine1(e.target.value)}
-                  className='border border-[#D1CEC6] p-2 rounded'
+                  disabled={isLoading}
+                  className='border border-[#D1CEC6] p-2 rounded disabled:opacity-50'
                   placeholder='Address line'
                 />
 
@@ -485,7 +486,8 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ initialProfile }) => {
                 <input
                   value={addPhone}
                   onChange={(e) => setAddPhone(e.target.value)}
-                  className='border border-gray-200 p-2 rounded'
+                  disabled={isLoading}
+                  className='border border-gray-200 p-2 rounded disabled:opacity-50'
                   placeholder='Phone number'
                 />
               </div>
@@ -503,14 +505,14 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ initialProfile }) => {
                     setAddError("");
                   }}
                   className='px-3 py-1.5 text-sm'
-                  disabled={adding}>
+                  disabled={isLoading}>
                   Cancel
                 </button>
                 <button
                   onClick={handleAddDone}
-                  className='px-4 py-2 bg-[#619B7F] text-white rounded text-sm'
-                  disabled={adding}>
-                  {adding ? "Saving..." : "Done"}
+                  className='px-4 py-2 bg-[#619B7F] text-white rounded text-sm disabled:opacity-50'
+                  disabled={isLoading}>
+                  {isLoading ? "Saving..." : "Done"}
                 </button>
               </div>
             </div>

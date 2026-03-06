@@ -1,4 +1,5 @@
 import { Check } from "lucide-react";
+import SubscriptionButton from "./SubscriptionButton";
 
 export default function SubscriptionContent() {
   const subscriptionData = [
@@ -73,10 +74,7 @@ export default function SubscriptionContent() {
               </p>
             </div>
             <div className='my-6 md:my-9'>
-              <button
-                className={`w-full mt-4 px-6 py-2 text-xl  border border-[#D1CEC6] cursor-pointer rounded-md ${subscription.status === "active" ? "bg-white text-(--primary) hover:bg-(--primary) hover:text-white" : "bg-(--primary) hover:bg-[#226142] text-white"}  transition-colors duration-200 `}>
-                {subscription.buttonText}
-              </button>
+           <SubscriptionButton status={subscription.status} text={subscription.buttonText}/>
             </div>
 
             <div className=''>

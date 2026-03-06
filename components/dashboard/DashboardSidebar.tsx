@@ -14,18 +14,30 @@ import {
   Warehouse,
 } from "lucide-react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { FiBookmark, FiGrid, FiHome, FiSettings } from "react-icons/fi";
-import { logoutAction } from "@/actions/auth.action";
+import { useLogoutMutation } from "@/actions/hooks/auth.hooks";
 
 export default function DashboardSidebar() {
+  const router = useRouter();
   const [showProfileOverview, setShowProfileOverview] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [showMain, setShowMain] = useState(false);
   const [showTool, setShowTool] = useState(false);
   const pathname = usePathname();
   const [currentHash, setCurrentHash] = useState("");
+
+  // Logout mutation
+  const logoutMutation = useLogoutMutation({
+    onSuccess: () => {
+      try {
+        localStorage.setItem("isLoggedIn", "false");
+        localStorage.removeItem("userRole");
+      } catch {}
+      router.push("/");
+    },
+  });
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -45,6 +57,10 @@ export default function DashboardSidebar() {
     }, 0);
     return () => clearTimeout(timer);
   }, [pathname]);
+
+  const handleLogout = () => {
+    logoutMutation.mutate();
+  };
 
   return (
     <div className='sticky top-20 max-w-88 h-[calc(100vh-2rem)] border border-[#D1CEC6] rounded-lg flex flex-col justify-between'>
@@ -294,19 +310,12 @@ export default function DashboardSidebar() {
 
       <div className='mt-6 border-t border-[#D1CEC6]'>
         <button
-          onClick={async () => {
-            await logoutAction();
-
-            try {
-              localStorage.setItem("isLoggedIn", "false");
-              localStorage.removeItem("userRole");
-            } catch {}
-            window.location.href = "/";
-          }}
-          className='p-4 rounded text-red-600 hover:bg-gray-50'>
+          onClick={handleLogout}
+          disabled={logoutMutation.isPending}
+          className='p-4 rounded text-red-600 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed w-full text-left'>
           <div className='flex items-center justify-start gap-x-1'>
-            <LogOut />
-            Logout
+            <LogOut size={18} />
+            <span>{logoutMutation.isPending ? "Logging out..." : "Logout"}</span>
           </div>
         </button>
       </div>

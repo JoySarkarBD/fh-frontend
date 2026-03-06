@@ -2,17 +2,15 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useState, SubmitEvent } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { AiOutlineUser } from "react-icons/ai";
 import { FiPhone } from "react-icons/fi";
 import { LuEye, LuEyeOff, LuLock } from "react-icons/lu";
 import { MdOutlineEmail } from "react-icons/md";
-import { registerAction, RegisterPayload } from "@/actions/auth.action";
 import { ArrowLeft } from "lucide-react";
 import bgImage from "../../../public/signup.png";
-
-// TODO: Need to ask if home & office address will be taken from the sign up page or not
+import { useRegisterMutation } from "@/actions/hooks/auth.hooks";
 
 export default function SignupPage() {
   const router = useRouter();
@@ -24,62 +22,59 @@ export default function SignupPage() {
   const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [errorMessage, setErrorMessage] = useState("");
-  const [successMessage, setSuccessMessage] = useState("");
 
-  const handleSubmit = async (event: SubmitEvent<HTMLFormElement>) => {
+  const registerMutation = useRegisterMutation({
+    onSuccess: (data) => {
+      if (data.success) {
+        setTimeout(() => {
+          router.push("/login");
+        }, 700);
+      }
+    },
+  });
+
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    setErrorMessage("");
-    setSuccessMessage("");
 
     if (!agreed) {
-      setErrorMessage("Please agree to the terms to continue.");
       return;
     }
 
     if (password !== confirmPassword) {
-      setErrorMessage("Confirm password must match password.");
       return;
     }
 
-    setIsSubmitting(true);
+    const payload = {
+      name,
+      email,
+      phone,
+      password,
+      confirmPassword,
+    };
 
-    try {
-      const payload: RegisterPayload = {
-        name,
-        email,
-        phone,
-        password,
-        confirmPassword,
-      };
-
-      const response = await registerAction(payload);
-
-      if (!response.success) {
-        setErrorMessage(response.message || "Registration failed.");
-        return;
-      }
-
-      setSuccessMessage(response.message || "Registration successful.");
-      setTimeout(() => {
-        router.push("/login");
-      }, 700);
-    } catch (error: unknown) {
-      setErrorMessage(
-        error instanceof Error
-          ? error.message
-          : "Something went wrong. Please try again.",
-      );
-    } finally {
-      setIsSubmitting(false);
-    }
+    registerMutation.mutate(payload);
   };
+
+  // Get error message from mutation
+  const getErrorMessage = () => {
+    if (password !== confirmPassword && confirmPassword) {
+      return "Confirm password must match password.";
+    }
+    if (!agreed) {
+      return "Please agree to the terms to continue.";
+    }
+    if (registerMutation.isError) {
+      return registerMutation.error?.message || "Registration failed. Please try again.";
+    }
+    return "";
+  };
+
+  const errorMessage = getErrorMessage();
 
   return (
     <div
       className='
-      min-h-screen w-full flex flex-col items-center justify-center  relative
+      min-h-screen w-full flex flex-col items-center justify-center relative
     '>
       {/* Background image */}
       <div className='absolute inset-0 z-10'>
@@ -91,6 +86,7 @@ export default function SignupPage() {
           priority
         />
       </div>
+      
       {/* Logo */}
       <div className='absolute top-6 left-6 flex items-center gap-2'>
         <Image
@@ -121,7 +117,8 @@ export default function SignupPage() {
               onChange={(event) => setName(event.target.value)}
               required
               autoComplete='name'
-              className='flex-1 text-sm text-gray-500 placeholder-gray-400 outline-none bg-transparent'
+              disabled={registerMutation.isPending}
+              className='flex-1 text-sm text-gray-500 placeholder-gray-400 outline-none bg-transparent disabled:opacity-50'
             />
           </div>
         </div>
@@ -140,7 +137,8 @@ export default function SignupPage() {
               onChange={(event) => setEmail(event.target.value)}
               required
               autoComplete='email'
-              className='flex-1 text-sm text-gray-500 placeholder-gray-400 outline-none bg-transparent'
+              disabled={registerMutation.isPending}
+              className='flex-1 text-sm text-gray-500 placeholder-gray-400 outline-none bg-transparent disabled:opacity-50'
             />
           </div>
         </div>
@@ -159,7 +157,8 @@ export default function SignupPage() {
               onChange={(event) => setPhone(event.target.value)}
               required
               autoComplete='tel'
-              className='flex-1 text-sm text-gray-500 placeholder-gray-400 outline-none bg-transparent'
+              disabled={registerMutation.isPending}
+              className='flex-1 text-sm text-gray-500 placeholder-gray-400 outline-none bg-transparent disabled:opacity-50'
             />
           </div>
         </div>
@@ -178,12 +177,14 @@ export default function SignupPage() {
               onChange={(event) => setPassword(event.target.value)}
               required
               autoComplete='new-password'
-              className='flex-1 text-sm text-gray-500 placeholder-gray-400 outline-none bg-transparent'
+              disabled={registerMutation.isPending}
+              className='flex-1 text-sm text-gray-500 placeholder-gray-400 outline-none bg-transparent disabled:opacity-50'
             />
             <button
               type='button'
               onClick={() => setShowPassword(!showPassword)}
-              className='text-gray-400 hover:text-gray-600'>
+              className='text-gray-400 hover:text-gray-600'
+              disabled={registerMutation.isPending}>
               {showPassword ? (
                 <LuEyeOff className='w-4 h-4 text-[#2C2C2A]' />
               ) : (
@@ -207,12 +208,14 @@ export default function SignupPage() {
               onChange={(event) => setConfirmPassword(event.target.value)}
               required
               autoComplete='new-password'
-              className='flex-1 text-sm text-gray-500 placeholder-gray-400 outline-none bg-transparent'
+              disabled={registerMutation.isPending}
+              className='flex-1 text-sm text-gray-500 placeholder-gray-400 outline-none bg-transparent disabled:opacity-50'
             />
             <button
               type='button'
               onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-              className='text-gray-400 hover:text-gray-600'>
+              className='text-gray-400 hover:text-gray-600'
+              disabled={registerMutation.isPending}>
               {showConfirmPassword ? (
                 <LuEyeOff className='w-4 h-4 text-[#2C2C2A]' />
               ) : (
@@ -229,6 +232,7 @@ export default function SignupPage() {
             id='terms'
             checked={agreed}
             onChange={(e) => setAgreed(e.target.checked)}
+            disabled={registerMutation.isPending}
             className='w-4 h-4 rounded border-gray-300 accent-green-600'
           />
           <label htmlFor='terms' className='text-sm text-gray-600'>
@@ -243,20 +247,24 @@ export default function SignupPage() {
           </label>
         </div>
 
+        {/* Error Message */}
         {errorMessage && (
           <p className='mb-4 text-sm text-red-600'>{errorMessage}</p>
         )}
 
-        {successMessage && (
-          <p className='mb-4 text-sm text-green-600'>{successMessage}</p>
+        {/* Success Message */}
+        {registerMutation.isSuccess && (
+          <p className='mb-4 text-sm text-green-600'>
+            {registerMutation.data?.message || "Registration successful! Redirecting to login..."}
+          </p>
         )}
 
         {/* Sign Up Button */}
         <button
           type='submit'
-          disabled={isSubmitting}
+          disabled={registerMutation.isPending || !agreed || password !== confirmPassword}
           className='w-full px-6 py-2.5 bg-[#619B7F] text-xl text-white rounded-lg hover:bg-[#3a6a50] transition-colors duration-300 cursor-pointer disabled:cursor-not-allowed disabled:opacity-70'>
-          {isSubmitting ? "Signing up..." : "Sign up"}
+          {registerMutation.isPending ? "Signing up..." : "Sign up"}
         </button>
 
         {/* Divider */}
@@ -269,7 +277,10 @@ export default function SignupPage() {
         {/* Social Buttons */}
         <div className='flex justify-center gap-5 mb-6'>
           {/* Google */}
-          <button className='w-10 h-10 rounded-full flex items-center justify-center'>
+          <button 
+            type='button'
+            className='w-10 h-10 rounded-full flex items-center justify-center hover:opacity-80 transition-opacity'
+            disabled={registerMutation.isPending}>
             <svg className='w-7 h-7' viewBox='0 0 24 24'>
               <path
                 fill='#4285F4'
@@ -290,13 +301,19 @@ export default function SignupPage() {
             </svg>
           </button>
           {/* Facebook */}
-          <button className='w-10 h-10 rounded-full flex items-center justify-center'>
+          <button 
+            type='button'
+            className='w-10 h-10 rounded-full flex items-center justify-center hover:opacity-80 transition-opacity'
+            disabled={registerMutation.isPending}>
             <svg className='w-7 h-7' viewBox='0 0 24 24' fill='#1877F2'>
               <path d='M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z' />
             </svg>
           </button>
           {/* Apple */}
-          <button className='w-10 h-10 rounded-full flex items-center justify-center'>
+          <button 
+            type='button'
+            className='w-10 h-10 rounded-full flex items-center justify-center hover:opacity-80 transition-opacity'
+            disabled={registerMutation.isPending}>
             <svg className='w-7 h-7' viewBox='0 0 24 24' fill='#000000'>
               <path d='M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z' />
             </svg>
