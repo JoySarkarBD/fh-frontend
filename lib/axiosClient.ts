@@ -1,5 +1,5 @@
 import { config } from "@/config/config";
-import axios from "axios";
+import axios, { InternalAxiosRequestConfig } from "axios";
 import Cookies from "js-cookie";
 
 const axiosClient = axios.create({
@@ -7,14 +7,18 @@ const axiosClient = axios.create({
   withCredentials: true,
 });
 
-axiosClient.interceptors.request.use((config) => {
-  const token = Cookies.get("accessToken");
+axiosClient.interceptors.request.use(
+  (requestConfig: InternalAxiosRequestConfig) => {
+    const token = Cookies.get("accessToken");
+    console.log(token, 'token finnaly get');
 
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
-  }
+    if (token) {
+      requestConfig.headers.Authorization = `Bearer ${token}`;
+    }
 
-  return config;
-});
+    return requestConfig;
+  },
+  (error) => Promise.reject(error)
+);
 
 export default axiosClient;

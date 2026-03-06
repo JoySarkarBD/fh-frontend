@@ -1,9 +1,9 @@
 "use server";
 
-import { cookies } from "next/headers";
-import { apiFetch } from "@/lib/fetcher";
 import type { ApiResponse } from "@/lib/api";
+import { apiFetch } from "@/lib/fetcher";
 import type { UserProfile } from "@/types/user";
+import { cookies } from "next/headers";
 
 // Register payload and response types
 export type RegisterPayload = {
@@ -97,7 +97,7 @@ export async function loginAction(
       const cookieStore = await cookies();
 
       cookieStore.set("accessToken", token, {
-        httpOnly: true,
+        httpOnly: false, 
         secure: process.env.NODE_ENV === "production",
         sameSite: "lax",
         path: "/",

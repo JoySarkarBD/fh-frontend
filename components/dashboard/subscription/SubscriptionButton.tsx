@@ -1,8 +1,7 @@
 "use client";
 
-
 import { useSubscriptionMutations } from "@/actions/hooks/subscripiton.hooks";
-import React from "react";
+import React, { useEffect } from "react";
 
 interface SubscriptionButtonProps {
   status: "active" | "inactive";
@@ -13,11 +12,23 @@ const SubscriptionButton: React.FC<SubscriptionButtonProps> = ({
   status,
   text,
 }) => {
-  const { createMutation, isLoading, isError, error } = useSubscriptionMutations();
-  console.log(isLoading, error, 'hlw');
+  const { createMutation } = useSubscriptionMutations();
+
+  const { isPending, data, isError, error, isSuccess } = createMutation;
+
+  //  redirect inside useEffect
+  useEffect(() => {
+    if (isSuccess && data?.data?.checkoutSessionUrl) {
+      window.location.href = data.data.checkoutSessionUrl;
+    }
+  }, [isSuccess, data]);
 
   const handleClick = () => {
-   const resp = createMutation.mutate();
+
+    if(text === 'Get Started'){
+          createMutation.mutate();
+
+    }
 
   };
 
@@ -25,29 +36,27 @@ const SubscriptionButton: React.FC<SubscriptionButtonProps> = ({
     <div className="w-full">
       <button
         onClick={handleClick}
-        disabled={createMutation.isPending}
+        disabled={isPending}
         className={`w-full mt-4 px-6 py-2 text-xl border border-[#D1CEC6] rounded-md transition-colors duration-200
         ${
           status === "active"
             ? "bg-white text-[#0F3B2A] hover:bg-[#0F3B2A] hover:text-white"
             : "bg-[#0F3B2A] hover:bg-[#226142] text-white"
         }
-        ${
-          createMutation.isPending
-            ? "cursor-not-allowed opacity-70"
-            : "cursor-pointer"
-        }
+        ${isPending ? "cursor-not-allowed opacity-70" : "cursor-pointer"}
         `}
       >
-        {isLoading? "Processing..." : text}
+        {isPending ? "Processing..." : text}
       </button>
 
       {/* Error Message */}
-      {createMutation.isError && (
+      {isError && (
         <p className="text-red-500 text-sm mt-2" role="alert">
-          {createMutation.error instanceof Error
-            &&  createMutation.error.message  === 'Unauthorized' ? "Please Login First"
-            : createMutation.error.message || 'Something went wrong!'}
+          {error instanceof Error && error.message === "Unauthorized"
+            ? "Please Login First"
+            : error instanceof Error
+            ? error.message
+            : "Something went wrong!"}
         </p>
       )}
     </div>
