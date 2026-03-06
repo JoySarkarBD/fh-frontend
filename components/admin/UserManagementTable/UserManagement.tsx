@@ -1,33 +1,49 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
-import { useGetAllUsersAdmin } from "../../../actions/hooks/user.hooks";
+import { useGetAllUsersAdmin } from "@/actions/hooks/user.hooks";
 import Pagination from "@/components/pagination/Pagination";
-import { Loader2 } from "lucide-react";
+import { Loader2, Search } from "lucide-react";
 
 const PER_PAGE = 9;
 
 export default function UserManagement() {
   const router = useRouter();
   const [currentPage, setCurrentPage] = useState(1);
+  const [searchInput, setSearchInput] = useState("");
+  const [searchTerm, setSearchTerm] = useState("");
 
-  // Use the real API hook
-  const { data, isLoading, isError, error } = useGetAllUsersAdmin(
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      const normalized = searchInput.trim();
+      setSearchTerm(normalized);
+      setCurrentPage(1);
+    }, 250);
+
+    return () => clearTimeout(timer);
+  }, [searchInput]);
+
+  // Fetch data with current page + search
+  const { data, isLoading, isFetching, isError, error } = useGetAllUsersAdmin(
     currentPage,
     PER_PAGE,
-    "", // search term
+    searchTerm,
   );
 
-  // Extract real data from API response
-  const users = data?.users ?? [];
+  const rawUsers = data?.users ?? [];
   const pagination = data?.pagination;
   const totalPages = pagination?.totalPages ?? 1;
   const totalUsers = pagination?.total ?? 0;
 
-  // ── Loading state ──────────────────────────────────────
-  if (isLoading) {
+  // Hide ADMIN users
+  const filteredUsers = rawUsers.filter(
+    (user) => String(user.role || "").toUpperCase() !== "ADMIN",
+  );
+
+  // Initial loading only (keep layout mounted during subsequent fetches)
+  if (isLoading && !data) {
     return (
       <div className='flex flex-col items-center justify-center min-h-100 gap-4'>
         <Loader2 className='h-10 w-10 animate-spin text-gray-500' />
@@ -36,162 +52,177 @@ export default function UserManagement() {
     );
   }
 
-  // ── Error state ──
+  // Error
   if (isError) {
     return (
       <div className='p-8 text-center text-red-600 bg-red-50 rounded-xl border border-red-200'>
         <p className='font-medium'>Failed to load users</p>
         <p className='text-sm mt-2'>
-          {error?.message || "Something went wrong. Please try again later."}
+          {error?.message || "Something went wrong. Please try again."}
         </p>
       </div>
     );
   }
 
-  // ── Empty state ──
-  if (users.length === 0) {
-    return (
-      <div className='p-8 text-center text-gray-500'>
-        No users found at the moment.
-      </div>
-    );
-  }
-
-  // ── Prepare table data (map backend shape → your table shape) ──
-  const tableRows = users.map((user) => ({
+  // Table rows
+  const tableRows = filteredUsers.map((user) => ({
     id: user._id,
-    image: "/avatar.png", // ← change when backend sends profileImage
+    image: "/user.png",
     profileName: user.name || "Unknown",
     email: user.email || "N/A",
     phone: user.phone || "N/A",
     address: user.homeAddress || user.officeAddress || "N/A",
-    subscription: "Free", // ← update when you add isSubscribed to backend
-    propertiesOwn: 0, // ← update when backend provides these counts
+    subscription: user.isSubscribed ?? false,
+    propertiesOwn: 0,
     propertiesBuy: 0,
     propertiesSell: 0,
   }));
 
   return (
-    <div className='bg-white rounded-xl border border-[#D1CEC6]'>
-      {/* Page title */}
-      <div className='px-6 py-5'>
-        <h1 className='text-xl md:text-2xl border-b border-[#D1CEC6] pb-3'>
+    <div className='bg-white rounded-xl border border-[#D1CEC6] overflow-hidden'>
+      {/* Header + Search */}
+      <div className='px-6 py-5 border-b border-[#D1CEC6] flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4'>
+        <h1 className='text-xl md:text-2xl font-semibold text-gray-800'>
           User Management
         </h1>
+
+        {/* Simple Tailwind search input */}
+        <div className='relative w-full sm:w-72'>
+          <Search className='absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none' />
+          <input
+            type='text'
+            placeholder='Search by name or email...'
+            value={searchInput}
+            onChange={(e) => {
+              setSearchInput(e.target.value);
+            }}
+            className='
+              w-full pl-10 pr-4 py-2.5
+              border border-[#D1CEC6] rounded-lg
+              text-sm text-gray-700 placeholder-gray-400
+              focus:outline-none focus:border-[#619B7F] focus:ring-2 focus:ring-[#619B7F]/20
+              transition-all duration-200
+            '
+          />
+        </div>
       </div>
 
       {/* Table */}
-      <div className='overflow-x-auto px-5'>
-        <table className='w-full text-sm'>
-          <thead>
-            <tr className='border border-[#D1CEC6]'>
-              <th className='px-4 py-3 text-left font-medium w-28 border border-[#E8E5DD]'>
+      <div className='overflow-x-auto'>
+        <table className='w-full text-[15px] text-left'>
+          <thead className='bg-gray-50 border-b border-[#D1CEC6]'>
+            <tr>
+              <th className='px-6 py-4 text-left font-medium text-gray-600 w-28'>
                 Profile
               </th>
-              <th className='px-4 py-3 text-left font-medium border border-[#E8E5DD]'>
+              <th className='px-6 py-4 text-left font-medium text-gray-600'>
                 User Name
               </th>
-              <th className='px-4 py-3 text-left font-medium border border-[#E8E5DD]'>
+              <th className='px-6 py-4 text-left font-medium text-gray-600'>
                 Email Address
               </th>
-              <th className='px-4 py-3 text-left font-medium border border-[#E8E5DD]'>
+              <th className='px-6 py-4 text-left font-medium text-gray-600'>
                 Phone
               </th>
-              <th className='px-4 py-3 text-left font-medium border border-[#E8E5DD]'>
+              <th className='px-6 py-4 text-left font-medium text-gray-600'>
                 Address
               </th>
-              <th className='px-4 py-3 text-left font-medium border border-[#E8E5DD]'>
+              <th className='px-6 py-4 text-left font-medium text-gray-600'>
                 Subscription
               </th>
-              <th className='px-4 py-3 text-left font-medium border border-[#E8E5DD]'>
+              <th className='px-6 py-4 text-left font-medium text-gray-600'>
                 Properties Own
               </th>
-              <th className='px-4 py-3 text-left font-medium border border-[#E8E5DD]'>
+              <th className='px-6 py-4 text-left font-medium text-gray-600'>
                 Properties Buy
               </th>
-              <th className='px-4 py-3 text-left font-medium border border-[#E8E5DD]'>
+              <th className='px-6 py-4 text-left font-medium text-gray-600'>
                 Properties Sell
               </th>
-              <th className='px-4 py-3 text-left font-medium border border-[#E8E5DD]'>
+              <th className='px-6 py-4 text-left font-medium text-gray-600'>
                 Action
               </th>
             </tr>
           </thead>
-          <tbody className='border border-[#D1CEC6]'>
-            {tableRows.map((user) => (
-              <tr key={user.id} className='hover:bg-gray-50 transition-colors'>
-                {/* Profile Image */}
-                <td className='px-4 py-3 border border-[#E8E5DD]'>
-                  <div className='w-10 h-10 rounded-full overflow-hidden bg-gray-100 shrink-0'>
-                    <Image
-                      src={user.image}
-                      alt={user.profileName}
-                      width={40}
-                      height={40}
-                      className='w-full h-full object-cover'
-                    />
-                  </div>
-                </td>
 
-                {/* Name */}
-                <td className='px-4 py-3 font-medium text-[#70706C] border border-[#E8E5DD]'>
-                  {user.profileName}
-                </td>
+          <tbody className='divide-y divide-[#E8E5DD]'>
+            {tableRows.length > 0 ? (
+              tableRows.map((user) => (
+                <tr
+                  key={user.id}
+                  className='hover:bg-gray-50 transition-colors duration-150'>
+                  <td className='px-6 py-4 whitespace-nowrap'>
+                    <div className='w-10 h-10 rounded-full overflow-hidden bg-gray-100 border border-gray-200'>
+                      <Image
+                        src={user.image}
+                        alt={user.profileName}
+                        width={40}
+                        height={40}
+                        className='w-full h-full object-cover'
+                      />
+                    </div>
+                  </td>
 
-                {/* Email */}
-                <td className='px-4 py-3 text-[#70706C] border border-[#E8E5DD]'>
-                  {user.email}
-                </td>
+                  <td className='px-6 py-4 font-medium text-gray-800'>
+                    {user.profileName}
+                  </td>
+                  <td className='px-6 py-4 text-gray-600'>{user.email}</td>
+                  <td className='px-6 py-4 text-gray-600'>{user.phone}</td>
+                  <td className='px-6 py-4 text-gray-600'>{user.address}</td>
 
-                {/* Phone */}
-                <td className='px-4 py-3 text-[#70706C] border border-[#E8E5DD]'>
-                  {user.phone}
-                </td>
+                  <td className='px-6 py-4'>
+                    <span
+                      className={`inline-flex items-center px-3 py-1 rounded-full text-xs  ${
+                        user.subscription
+                          ? "bg-green-50 text-[#619B7F]"
+                          : "bg-gray-100 text-black"
+                      }`}>
+                      {user.subscription ? "Premium" : "Free"}
+                    </span>
+                  </td>
 
-                {/* Address */}
-                <td className='px-4 py-3 text-[#70706C] border border-[#E8E5DD]'>
-                  {user.address}
-                </td>
+                  <td className='px-6 py-4 text-center text-gray-600'>
+                    {user.propertiesOwn}
+                  </td>
+                  <td className='px-6 py-4 text-center text-gray-600'>
+                    {user.propertiesBuy}
+                  </td>
+                  <td className='px-6 py-4 text-center text-gray-600'>
+                    {user.propertiesSell}
+                  </td>
 
-                {/* Subscription */}
-                <td className='px-4 py-3 text-[#70706C] border border-[#E8E5DD]'>
-                  <span
-                    className={`inline-flex items-center px-3 py-1 rounded-2xl border text-[12px] whitespace-nowrap bg-[#F1F5F3] ${
-                      user.subscription === "Premium"
-                        ? "text-[#619B7F] border-[#CFE6FF]"
-                        : "text-[#70706C] border-[#D1CEC6]"
-                    }`}>
-                    {user.subscription}
-                  </span>
-                </td>
-
-                {/* Properties */}
-                <td className='px-4 py-3 text-[#70706C] border border-[#E8E5DD]'>
-                  {user.propertiesOwn}
-                </td>
-                <td className='px-4 py-3 text-[#70706C] border border-[#E8E5DD]'>
-                  {user.propertiesBuy}
-                </td>
-                <td className='px-4 py-3 text-[#70706C] border border-[#E8E5DD]'>
-                  {user.propertiesSell}
-                </td>
-
-                {/* Action */}
-                <td className='px-4 py-3 border border-[#E8E5DD]'>
-                  <button
-                    onClick={() => router.push(`/users/${user.id}`)}
-                    className='text-sm text-[#1B1B1A] underline underline-offset-2 hover:opacity-70 transition-opacity whitespace-nowrap'>
-                    View User
-                  </button>
+                  <td className='px-6 py-4 whitespace-nowrap text-right'>
+                    <button
+                      onClick={() => router.push(`/users/${user.id}`)}
+                      className='text-sm text-[#1B1B1A] underline underline-offset-2 transition-colors'>
+                      View User
+                    </button>
+                  </td>
+                </tr>
+              ))
+            ) : (
+              <tr>
+                <td
+                  colSpan={10}
+                  className='px-6 py-10 text-center text-gray-500'>
+                  {searchTerm.trim()
+                    ? "No users found matching your search."
+                    : "No regular users found at the moment."}
                 </td>
               </tr>
-            ))}
+            )}
           </tbody>
         </table>
       </div>
 
-      {/* Pagination – now uses real total */}
-      <div className='px-4 py-4'>
+      {/* Pagination + info */}
+      <div className='px-6 py-4 border-t border-[#D1CEC6] flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 text-sm text-gray-600'>
+        <p>
+          Showing {filteredUsers.length} of {totalUsers} users
+          {searchTerm && ` (filtered by "${searchTerm}")`}
+          {isFetching ? " • Updating..." : ""}
+        </p>
+
         <Pagination
           currentPage={currentPage}
           totalPages={totalPages}

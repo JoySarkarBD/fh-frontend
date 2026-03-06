@@ -76,8 +76,6 @@ export async function middleware(req: NextRequest) {
     }
   }
 
-  console.log({ isAuthenticated, userRole, isSubscribed }, "middleware state");
-
   // Public pages - allow access
   if (publicPages.includes(pathname)) {
     return NextResponse.next();

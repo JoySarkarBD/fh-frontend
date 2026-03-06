@@ -2,7 +2,7 @@
 
 import { getUserClient, UsersResponse } from "@/services/user";
 import { getAllUsers } from "@/services/user";
-import { useQuery } from "@tanstack/react-query";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
 
 /**
  * Hook for fetching the current user's profile information using the client-side axios instance.
@@ -29,8 +29,8 @@ export const useGetAllUsersAdmin = (
     queryKey: ["admin-users", page, limit, search],
     queryFn: () => getAllUsers({ page, limit, search }),
     staleTime: 60 * 1000,
+    placeholderData: keepPreviousData,
     retry: 1,
-    // Optional: if you want to disable when not admin → later add condition
     // enabled: isAdmin === true,
     select: (data): UsersResponse => ({
       users: data.users ?? [],
