@@ -10,7 +10,6 @@ const axiosClient = axios.create({
 axiosClient.interceptors.request.use(
   (requestConfig: InternalAxiosRequestConfig) => {
     const token = Cookies.get("accessToken");
-    console.log(token, 'token finnaly get');
 
     if (token) {
       requestConfig.headers.Authorization = `Bearer ${token}`;
@@ -18,7 +17,7 @@ axiosClient.interceptors.request.use(
 
     return requestConfig;
   },
-  (error) => Promise.reject(error)
+  (error) => Promise.reject(error),
 );
 
 export default axiosClient;
