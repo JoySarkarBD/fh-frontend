@@ -1,3 +1,4 @@
+import TanstackProvider from "@/providers/TanstackProvider";
 import { Jost } from "next/font/google";
 import "./globals.css";
 
@@ -21,7 +22,9 @@ export default function RootLayout({
   return (
     <html lang='en'>
       <body className={`${jost.className} min-h-screen flex flex-col`}>
-        {children}
+<TanstackProvider>
+          {children}
+</TanstackProvider>
       </body>
     </html>
   );
