@@ -6,7 +6,12 @@ import {
   useQueryClient,
   UseQueryOptions,
 } from "@tanstack/react-query";
-import { createProperty, ICreateProperty, PropertyStatus } from "@/services/property";
+import {
+  createProperty,
+  ICreateProperty,
+  IPropertyResponse,
+  PropertyStatus,
+} from "@/services/property";
 import axiosClient from "@/lib/axiosClient";
 
 // Types
@@ -118,7 +123,7 @@ export const useUserProperties = (
   return useQuery<ApiResponse<IProperty[]>>({
     queryKey: propertyKeys.userProperties(userId),
     queryFn: async () => {
-      const response = await axiosClient.get(`/property/user/${userId}`);
+      const response = await axiosClient.get(`/property/`);
       return response.data;
     },
     enabled: !!userId,
@@ -134,7 +139,7 @@ export const useUserProperties = (
  * Create property mutation hook
  */
 export const useCreatePropertyMutation = (
-  options?: UseMutationOptions<ApiResponse<IProperty>, Error, ICreateProperty>
+  options?: UseMutationOptions<ApiResponse<IPropertyResponse>, Error, ICreateProperty>
 ) => {
   const queryClient = useQueryClient();
 
