@@ -1,11 +1,14 @@
 "use server";
 
-import type { ApiResponse } from "@/lib/api";
-import { apiFetch } from "@/lib/fetcher";
+import axiosClient from "@/lib/axiosClient";
 import type { UserProfile } from "@/types/user";
+import { AxiosError } from "axios";
 import { cookies } from "next/headers";
 
-// Register payload and response types
+// ============================================================================
+// Types
+// ============================================================================
+
 export type RegisterPayload = {
   name: string;
   email: string;
@@ -16,13 +19,11 @@ export type RegisterPayload = {
   confirmPassword: string;
 };
 
-// Login payload and response types
 export type LoginPayload = {
   email: string;
   password: string;
 };
 
-// Login response data type
 export type LoginData = {
   accessToken: string;
   user: {
@@ -30,108 +31,128 @@ export type LoginData = {
   };
 };
 
-// Current user data type returned from the /users/me endpoint
 type CurrentUserData = {
   role?: string;
 };
 
-// Authentication state for the navbar
 export type AuthNavbarState = {
   isLoggedIn: boolean;
   userRole: "user" | "admin";
 };
 
-/**
- * Defines the payload for adding or updating a user's address and phone number, specifying whether the information is for a home or office address. The payload includes optional fields for the address and phone number, allowing for flexibility in providing this information when updating the user's profile.
- */
 export type AddAddressPayload = {
   type: "home" | "office";
   address?: string;
   phone?: string;
 };
 
+export type UpdateProfilePayload = {
+  name?: string;
+  phone?: string;
+};
+
+interface ApiResponse<T> {
+  success: boolean;
+  message: string;
+  data: T;
+}
+
+interface ApiErrorResponse {
+  message?: string;
+  success?: boolean;
+}
+
+// ============================================================================
+// Actions
+// ============================================================================
+
 /**
  * Registers a new user with the provided registration details.
- *
- * @param payload - An object containing the user's registration information, including name, email, phone, home address, office address, password, and confirm password.
- * @returns A promise that resolves to the API response containing the success status, message, and any relevant data.
- * @throws An error if the registration request fails, with a message describing the issue.
  */
 export async function registerAction(payload: RegisterPayload) {
   try {
-    return await apiFetch<ApiResponse<unknown>>("/auth/register", {
-      method: "POST",
-      body: JSON.stringify(payload),
-    });
+    const response = await axiosClient.post<ApiResponse<unknown>>(
+      "/auth/register",
+      payload
+    );
+
+    console.log("Registration successful:", response.data);
+    return response.data;
   } catch (error) {
-    return {
-      success: false,
-      message:
-        error instanceof Error
-          ? error.message
-          : "Registration failed. Please try again.",
-      data: null,
-    } as ApiResponse<unknown>;
+    const axiosError = error as AxiosError<ApiErrorResponse>;
+
+    console.error("Registration error details:", {
+      message: axiosError.message,
+      response: axiosError.response?.data,
+      status: axiosError.response?.status,
+    });
+
+    throw new Error(
+      axiosError.response?.data?.message ||
+        axiosError.message ||
+        "Registration failed. Please try again."
+    );
   }
 }
 
 /**
  * Logs in a user with the provided email and password
- *
- * @param payload - An object containing the user's login credentials, including email and password.
- * @returns A promise that resolves to the API response containing the success status, message, and any relevant data, such as the access token and user information.
- * @throws An error if the login request fails, with a message describing the issue. The error may occur due to invalid credentials, server issues, or other reasons related to the authentication process.
  */
 export async function loginAction(
-  payload: LoginPayload,
-): Promise<ApiResponse<LoginData | null>> {
+  payload: LoginPayload
+): Promise<ApiResponse<LoginData>> {
   try {
-    const response = await apiFetch<ApiResponse<LoginData>>("/auth/login", {
-      method: "POST",
-      body: JSON.stringify(payload),
-    });
+    const response = await axiosClient.post<ApiResponse<LoginData>>(
+      "/auth/login",
+      payload
+    );
 
-    const token = response.data?.accessToken;
+    console.log("Login successful:", response.data);
+
+    const token = response.data.data?.accessToken;
 
     if (token) {
       const cookieStore = await cookies();
 
       cookieStore.set("accessToken", token, {
-        httpOnly: false, 
+        httpOnly: false,
         secure: process.env.NODE_ENV === "production",
         sameSite: "lax",
         path: "/",
       });
     }
 
-    return response;
+    return response.data;
   } catch (error) {
-    return {
-      success: false,
-      message:
-        error instanceof Error
-          ? error.message
-          : "Login failed. Please try again.",
-      data: null,
-    };
+    const axiosError = error as AxiosError<ApiErrorResponse>;
+
+    console.error("Login error details:", {
+      message: axiosError.message,
+      response: axiosError.response?.data,
+      status: axiosError.response?.status,
+    });
+
+    throw new Error(
+      axiosError.response?.data?.message ||
+        axiosError.message ||
+        "Login failed. Please try again."
+    );
   }
 }
 
 /**
  * Fetch the Current User
- *
- * @returns A promise that resolves to an object containing the authentication state of the user, including whether they are logged in and their role (user or admin). If the user is authenticated, it returns `isLoggedIn: true` and their role; otherwise, it returns `isLoggedIn: false` and defaults the role to "user".
- * @throws An error if the request to fetch the current user's profile fails, which may occur due to an invalid token, server issues, or other reasons related to authentication. The error message will provide details about the failure.
  */
 export async function getCurrentUserFromTokenAction(): Promise<AuthNavbarState> {
   try {
-    const response = await apiFetch<ApiResponse<CurrentUserData>>("/users/me", {
-      method: "GET",
-      cache: "no-store",
-    });
+    const response = await axiosClient.get<ApiResponse<CurrentUserData>>(
+      "/users/me"
+    );
+
+    console.log("Current user fetched:", response.data);
 
     const normalizedRole =
-      String(response.data?.role ?? "user").toLowerCase() === "admin"
+      String(response.data.data?.role ?? "user").toLowerCase() === "admin"
         ? "admin"
         : "user";
 
@@ -139,7 +160,14 @@ export async function getCurrentUserFromTokenAction(): Promise<AuthNavbarState> 
       isLoggedIn: true,
       userRole: normalizedRole,
     };
-  } catch {
+  } catch (error) {
+    const axiosError = error as AxiosError<ApiErrorResponse>;
+
+    console.error("Get current user error:", {
+      message: axiosError.message,
+      status: axiosError.response?.status,
+    });
+
     return {
       isLoggedIn: false,
       userRole: "user",
@@ -149,75 +177,115 @@ export async function getCurrentUserFromTokenAction(): Promise<AuthNavbarState> 
 
 /**
  * Fetch the full user profile from the backend using the server cookie token.
- * Returns `null` when the user is not authenticated or on error.
  */
 export async function getUserProfileAction(): Promise<UserProfile | null> {
   try {
-    const response = await apiFetch<ApiResponse<UserProfile>>("/users/me", {
-      method: "GET",
-      cache: "no-store",
+    const response = await axiosClient.get<ApiResponse<UserProfile>>(
+      "/users/me"
+    );
+
+    console.log("User profile fetched:", response.data);
+    return response.data.data ?? null;
+  } catch (error) {
+    const axiosError = error as AxiosError<ApiErrorResponse>;
+
+    console.error("Get user profile error:", {
+      message: axiosError.message,
+      status: axiosError.response?.status,
     });
 
-    return response.data ?? null;
-  } catch {
     return null;
   }
 }
 
 /**
- * Adds or updates the user's home or office address and phone number based on the provided payload. The function sends a PATCH request to the /users/me endpoint with the appropriate fields for either home or office information, depending on the type specified in the payload.
- *
- * @param payload - An object containing the type of address (home or office), the address itself, and the associated phone number. The address and phone fields are optional and will be trimmed before being sent to the server.
- * @returns A promise that resolves to the API response containing the success status, message, and the updated user profile data. If the request fails, it will throw an error with a message describing the issue.
+ * Adds or updates the user's home or office address and phone number
  */
 export async function addAddressAction(payload: AddAddressPayload) {
-  const body =
-    payload.type === "home"
-      ? {
-          homeAddress: payload.address?.trim() || "",
-          homePhone: payload.phone?.trim() || "",
-        }
-      : {
-          officeAddress: payload.address?.trim() || "",
-          officePhone: payload.phone?.trim() || "",
-        };
+  try {
+    const body =
+      payload.type === "home"
+        ? {
+            homeAddress: payload.address?.trim() || "",
+            homePhone: payload.phone?.trim() || "",
+          }
+        : {
+            officeAddress: payload.address?.trim() || "",
+            officePhone: payload.phone?.trim() || "",
+          };
 
-  return apiFetch<ApiResponse<UserProfile>>("/users/me", {
-    method: "PATCH",
-    body: JSON.stringify(body),
-  });
+    const response = await axiosClient.patch<ApiResponse<UserProfile>>(
+      "/users/me",
+      body
+    );
+
+    console.log("Address added/updated:", response.data);
+    return response.data;
+  } catch (error) {
+    const axiosError = error as AxiosError<ApiErrorResponse>;
+
+    console.error("Add address error:", {
+      message: axiosError.message,
+      response: axiosError.response?.data,
+      status: axiosError.response?.status,
+    });
+
+    throw new Error(
+      axiosError.response?.data?.message ||
+        axiosError.message ||
+        "Failed to update address"
+    );
+  }
 }
-
-/**
- * Updates the user's profile information, such as name and phone number, by sending a PATCH request to the /users/me endpoint with the provided payload. The function allows for partial updates, meaning that you can update either the name, the phone number, or both fields at the same time.
- *
- * @param payload - An object containing the fields to be updated in the user's profile. Both name and phone are optional, allowing for flexibility in updating only the desired fields. The function will trim the input values before sending them to the server to ensure that any leading or trailing whitespace is removed.
- * @returns A promise that resolves to the API response containing the success status, message, and the updated user profile data. If the request fails, it will throw an error with a message describing the issue.
- */
-export type UpdateProfilePayload = {
-  name?: string;
-  phone?: string;
-};
 
 /**
  * Update user's profile fields (name, phone) using PATCH /users/me
  */
 export async function updateProfileAction(payload: UpdateProfilePayload) {
-  return apiFetch<ApiResponse<UserProfile>>("/users/me", {
-    method: "PATCH",
-    body: JSON.stringify(payload),
-  });
+  try {
+    const response = await axiosClient.patch<ApiResponse<UserProfile>>(
+      "/users/me",
+      payload
+    );
+
+    console.log("Profile updated:", response.data);
+    return response.data;
+  } catch (error) {
+    const axiosError = error as AxiosError<ApiErrorResponse>;
+
+    console.error("Update profile error:", {
+      message: axiosError.message,
+      response: axiosError.response?.data,
+      status: axiosError.response?.status,
+    });
+
+    throw new Error(
+      axiosError.response?.data?.message ||
+        axiosError.message ||
+        "Failed to update profile"
+    );
+  }
 }
 
 /**
  * Logs out the current user by deleting the access token cookie.
- *
- * @returns A promise that resolves to an object indicating the success of the logout operation. The object contains a `success` property set to `true` if the logout was successful.
- * @throws An error if there is an issue with deleting the access token cookie, which may occur due to server issues or other reasons related to cookie management. The error message will provide details about the failure.
  */
 export async function logoutAction() {
-  const cookieStore = await cookies();
-  cookieStore.delete("accessToken");
+  try {
+    const cookieStore = await cookies();
+    cookieStore.delete("accessToken");
 
-  return { success: true };
+    console.log("Logout successful");
+    return { success: true };
+  } catch (error) {
+    const axiosError = error as AxiosError<ApiErrorResponse>;
+
+    console.error("Logout error:", {
+      message: axiosError.message,
+    });
+
+    throw new Error(
+      axiosError.message || "Logout failed. Please try again."
+    );
+  }
 }
