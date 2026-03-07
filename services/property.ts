@@ -27,7 +27,7 @@ export interface ICreateProperty {
   images?: File[];
 }
 
-// Response type
+// A single property
 export interface IPropertyResponse {
   id: string;
   propertyName: string;
@@ -42,22 +42,36 @@ export interface IPropertyResponse {
   yearBuilt: number;
   moreDetails: string;
   locationMapLink?: string;
-  IsPosted?: boolean;
+  isPublished?: boolean;
   sellPostingDate?: string;
   sellPostingTime?: string;
-  thumbnail?: string;
+  thumbnail?: any;
   images?: string[];
   createdAt: string;
   updatedAt: string;
+  
 }
 
+// Pagination meta
+export interface Meta {
+  page: number;
+  limit: number;
+  total: number;
+  totalPage: number;
+}
+
+// API response for paginated properties
+export interface PaginatedPropertiesResponse {
+  data: IPropertyResponse[]; // the array of properties
+  meta: Meta;                // pagination info
+}
 export interface ApiResponse<T> {
   success: boolean;
   message: string;
   data: T;
 }
 
-interface ApiErrorResponse {
+export interface ApiErrorResponse {
   message?: string;
   success?: boolean;
   errors?: Record<string, string[]>;
@@ -176,28 +190,6 @@ export const createProperty = async (data: ICreateProperty): Promise<ApiResponse
   }
 };
 
-/**
- * Optional: Get all properties with error handling
- */
-export const getProperties = async (): Promise<ApiResponse<IPropertyResponse[]>> => {
-  try {
-    const response = await axiosClient.get<ApiResponse<IPropertyResponse[]>>("/property");
-    return response.data;
-  } catch (error) {
-    const axiosError = error as AxiosError<ApiErrorResponse>;
-    
-    console.error("Get properties error:", {
-      message: axiosError.message,
-      status: axiosError.response?.status,
-    });
-
-    throw new Error(
-      axiosError.response?.data?.message ||
-        axiosError.message ||
-        "Failed to fetch properties."
-    );
-  }
-};
 
 /**
  * Optional: Get single property by ID with error handling
