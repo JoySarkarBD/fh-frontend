@@ -5,4 +5,6 @@ export interface Iblog {
   date: string;
   category: string;
   image: string;
+  publishDate?: string;
+  blogDetails?: string;
 }

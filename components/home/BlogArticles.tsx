@@ -1,3 +1,7 @@
+"use client";
+
+import { useArticles } from "@/actions/hooks/article.hooks";
+import { articleToBlog } from "@/services/article";
 import { Iblog } from "@/types/blog";
 import Title from "../shared/Title/Title";
 import ViewButton from "../shared/ViewButton/ViewButton";
@@ -14,44 +18,10 @@ export default function BlogArticles({
   title = "Blog and Articles",
   subtitle = "Insights and tips from our experts",
 }: BlogArticlesProps) {
-  const blogs: Iblog[] = [
-    {
-      id: "1",
-      title: "10 Tips for First-Time Home Buyers",
-      description:
-        "Essential advice to help you navigate your first home purchase with confidence.",
-      date: "30 January, 2026",
-      category: "Selling Tips",
-      image: "/blog.jpg",
-    },
-    {
-      id: "2",
-      title: "10 Tips for First-Time Home Buyers",
-      description:
-        "Essential advice to help you navigate your first home purchase with confidence.",
-      date: "30 January, 2026",
-      category: "Selling Tips",
-      image: "/blog.jpg",
-    },
-    {
-      id: "3",
-      title: "10 Tips for First-Time Home Buyers",
-      description:
-        "Essential advice to help you navigate your first home purchase with confidence.",
-      date: "30 January, 2026",
-      category: "Selling Tips",
-      image: "/blog.jpg",
-    },
-    {
-      id: "4",
-      title: "10 Tips for First-Time Home Buyers",
-      description:
-        "Essential advice to help you navigate your first home purchase with confidence.",
-      date: "30 January, 2026",
-      category: "Selling Tips",
-      image: "/blog.jpg",
-    },
-  ];
+  const { data, isLoading, isError } = useArticles();
+
+  const blogs: Iblog[] = (data?.data ?? []).slice(0, 4).map(articleToBlog);
+
   return (
     <div className='py-1 mb-16 md:mb-10 md:mx-12.5'>
       {showTitle && (
@@ -69,9 +39,17 @@ export default function BlogArticles({
         </div>
       )}
       <div className='px-4 md:px-8 mt-10'>
+        {isLoading && (
+          <div className='text-center py-4'>Loading articles...</div>
+        )}
+        {isError && (
+          <div className='text-center py-4 text-red-600'>
+            Failed to load articles.
+          </div>
+        )}
         <div className='grid grid-cols-1 md:grid-cols-2 gap-6 justify-between lg:grid-cols-4'>
-          {blogs.map((blog, idx) => (
-            <BlogCard blog={blog} key={idx + 1} />
+          {blogs.map((blog) => (
+            <BlogCard blog={blog} key={blog.id} />
           ))}
         </div>
       </div>
