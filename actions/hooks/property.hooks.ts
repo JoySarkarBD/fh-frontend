@@ -9,13 +9,16 @@ import {
 import axiosClient from "@/lib/axiosClient";
 import {
   createProperty,
+  getPropertyById,
   ICreateProperty,
   IPropertyResponse,
+  Meta,
   PaginatedPropertiesResponse,
   PropertyStatus,
 } from "@/services/property";
 import type { ApiResponse } from "@/lib/api";
-import { getOwnProperties } from "@/services/property.server";
+import { getAllProperties, getOwnProperties } from "@/services/property.server";
+import { keepPreviousData } from "@tanstack/react-query";
 
 // ============================================================================
 // Types
@@ -90,6 +93,50 @@ export const useUserOwnProperties = (
     queryFn: () => getOwnProperties(params),
     staleTime: 1000 * 60 * 5,
     ...options,
+  });
+
+export type AdminPropertiesResponse = {
+  properties: IPropertyResponse[];
+  meta: Meta;
+};
+
+export const useGetAllPropertiesAdmin = (
+  page: number = 1,
+  limit: number = 10,
+  search: string = "",
+) =>
+  useQuery<AdminPropertiesResponse, Error>({
+    queryKey: ["admin-properties", page, limit, search],
+    queryFn: async () => {
+      const res = await getAllProperties({ page, limit, search });
+      return {
+        properties: res.data?.data ?? [],
+        meta: res.data?.meta ?? {
+          page: 1,
+          limit,
+          total: 0,
+          totalPage: 1,
+        },
+      };
+    },
+    staleTime: 60 * 1000,
+    placeholderData: keepPreviousData,
+    retry: 1,
+  });
+
+export const useGetPropertyById = (id?: string) =>
+  useQuery<IPropertyResponse, Error>({
+    queryKey: ["property", id],
+    queryFn: async () => {
+      if (!id) {
+        throw new Error("No property id provided");
+      }
+      const res = await getPropertyById(id);
+      return res.data;
+    },
+    enabled: !!id,
+    staleTime: 60 * 1000,
+    retry: 1,
   });
 
 // ============================================================================

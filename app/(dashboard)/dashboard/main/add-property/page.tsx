@@ -1,21 +1,43 @@
 "use client";
 
-import { useCreatePropertyMutation, useUserOwnProperties } from "@/actions/hooks/property.hooks";
+import {
+  useCreatePropertyMutation,
+  useUserOwnProperties,
+} from "@/actions/hooks/property.hooks";
 import PropertyDetailsForm from "@/components/dashboard/property/PropertyDetailsForm";
 import PropertyForm from "@/components/dashboard/property/PropertyForm";
 import Location from "@/components/home/property/Location";
 import { PropertyStatus } from "@/services/property";
 import { useState } from "react";
 
+type AddPropertyFormData = {
+  propertyName: string;
+  address: string;
+  propertyType: string;
+  propertyStatus: PropertyStatus | "";
+  overview: string;
+  keyFeatures: string;
+  thumbnail?: File;
+  bedrooms: string;
+  bathrooms: string;
+  squareFeet: string;
+  price: string;
+  lotArea: string;
+  yearBuilt: string;
+  moreDetails: string;
+  photos: File[];
+  locationMapLink: string;
+};
+
 export default function AddProperty() {
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<AddPropertyFormData>({
     propertyName: "",
     address: "",
     propertyType: "",
     propertyStatus: "" as PropertyStatus,
     overview: "",
     keyFeatures: "",
-    thumbnail: null as File | null,
+    thumbnail: undefined,
     bedrooms: "",
     bathrooms: "",
     squareFeet: "",
@@ -28,17 +50,15 @@ export default function AddProperty() {
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const [locationCoords, setLocationCoords] = useState<{ lat: number; lng: number } | null>(null);
-
   // User properties query
-  const { data: userProperties, refetch: refetchUserProperties } = useUserOwnProperties({
+  const { refetch: refetchUserProperties } = useUserOwnProperties({
     page: 1,
     limit: 9,
   });
 
   // Create property mutation
   const createProperty = useCreatePropertyMutation({
-    onSuccess: (data) => {
+    onSuccess: () => {
       // Refetch user properties AFTER creation
       refetchUserProperties();
       alert("Property created successfully!");
@@ -50,7 +70,7 @@ export default function AddProperty() {
         propertyStatus: "" as PropertyStatus,
         overview: "",
         keyFeatures: "",
-        thumbnail: null,
+        thumbnail: undefined,
         bedrooms: "",
         bathrooms: "",
         squareFeet: "",
@@ -62,13 +82,16 @@ export default function AddProperty() {
         locationMapLink: "",
       });
     },
-    onError: (error: any) => {
+    onError: (error: Error) => {
       setErrors({ submit: error.message });
     },
   });
 
-  const updateFormData = (key: string, value: any) => {
-    setFormData((prev) => ({ ...prev, [key]: value }));
+  const updateFormData = (key: string, value: unknown) => {
+    setFormData((prev) => ({
+      ...prev,
+      [key]: value as AddPropertyFormData[keyof AddPropertyFormData],
+    }));
     if (errors[key]) {
       setErrors((prev) => {
         const newErrors = { ...prev };
@@ -80,12 +103,16 @@ export default function AddProperty() {
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
-    if (!formData.propertyName) newErrors.propertyName = "Property name is required";
+    if (!formData.propertyName)
+      newErrors.propertyName = "Property name is required";
     if (!formData.address) newErrors.address = "Address is required";
-    if (!formData.propertyType) newErrors.propertyType = "Property type is required";
-    if (!formData.propertyStatus) newErrors.propertyStatus = "Property status is required";
+    if (!formData.propertyType)
+      newErrors.propertyType = "Property type is required";
+    if (!formData.propertyStatus)
+      newErrors.propertyStatus = "Property status is required";
     if (!formData.overview) newErrors.overview = "Overview is required";
-    if (!formData.keyFeatures) newErrors.keyFeatures = "Key features is required";
+    if (!formData.keyFeatures)
+      newErrors.keyFeatures = "Key features is required";
     if (!formData.thumbnail) newErrors.thumbnail = "Thumbnail is required";
     if (!formData.bedrooms) newErrors.bedrooms = "Bedrooms is required";
     if (!formData.bathrooms) newErrors.bathrooms = "Bathrooms is required";
@@ -108,6 +135,8 @@ export default function AddProperty() {
 
     const propertyData = {
       propertyName: formData.propertyName,
+      address: formData.address,
+      propertyType: formData.propertyType,
       propertyStatus: formData.propertyStatus as PropertyStatus,
       overview: formData.overview,
       keyFeatures: formData.keyFeatures,
@@ -118,7 +147,9 @@ export default function AddProperty() {
       price: parseInt(formData.price),
       yearBuilt: parseInt(formData.yearBuilt),
       moreDetails: formData.moreDetails,
-      locationMapLink: formData.locationMapLink || `https://maps.google.com/?q=${formData.address}`,
+      locationMapLink:
+        formData.locationMapLink ||
+        `https://maps.google.com/?q=${formData.address}`,
       thumbnail: formData.thumbnail ?? undefined,
       images: formData.photos,
     };
@@ -128,28 +159,41 @@ export default function AddProperty() {
   };
 
   return (
-    <div className="container mx-auto px-4">
-      <div className="space-y-6">
-        <PropertyForm formData={formData} updateFormData={updateFormData} errors={errors} />
-        <PropertyDetailsForm formData={formData} updateFormData={updateFormData} errors={errors} />
+    <div className='container mx-auto px-4'>
+      <div className='space-y-6'>
+        <PropertyForm
+          formData={formData}
+          updateFormData={updateFormData}
+          errors={errors}
+        />
+        <PropertyDetailsForm
+          formData={formData}
+          updateFormData={updateFormData}
+          errors={errors}
+        />
 
-        <div className="mt-5">
-          <Location address={formData.address} lat={locationCoords?.lat} lng={locationCoords?.lng} />
+        <div className='mt-5'>
+          <Location
+            address={formData.address}
+            lat={undefined}
+            lng={undefined}
+          />
         </div>
 
         {errors.submit && (
-          <div className="bg-red-50 border border-red-200 rounded-md p-4">
-            <p className="text-red-600">{errors.submit}</p>
+          <div className='bg-red-50 border border-red-200 rounded-md p-4'>
+            <p className='text-red-600'>{errors.submit}</p>
           </div>
         )}
 
-        <div className="flex justify-end gap-4">
+        <div className='flex justify-end gap-4'>
           <button
             onClick={handleSubmit}
             disabled={createProperty.isPending}
-            className="px-6 py-3 bg-[#619B7F] text-white rounded-md hover:bg-[#4a7b63] transition disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {createProperty.isPending ? "Creating Property..." : "Create Property"}
+            className='px-6 py-3 bg-[#619B7F] text-white rounded-md hover:bg-[#4a7b63] transition disabled:opacity-50 disabled:cursor-not-allowed'>
+            {createProperty.isPending
+              ? "Creating Property..."
+              : "Create Property"}
           </button>
         </div>
       </div>
