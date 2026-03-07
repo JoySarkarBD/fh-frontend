@@ -203,7 +203,7 @@ export default function PropertyFilter({ value, onChange, onClear }: PropertyFil
         <div className='mb-4'>
           <div className='flex justify-between items-center border-b-2 border-gray-300 pb-2'>
             <label className='block font-semibold text-lg'>Property Type</label>
-            <button onClick={() => setShowPropertyType(!showPropertyType)} className='text-blue-500 flex items-center'>
+            <button onClick={() => setShowPropertyType(!showPropertyType)} className='text-black flex items-center'>
               {showPropertyType ? <ChevronUpIcon className='h-5 w-5' /> : <ChevronDownIcon className='h-5 w-5' />}
             </button>
           </div>
@@ -229,7 +229,7 @@ export default function PropertyFilter({ value, onChange, onClear }: PropertyFil
         <div className='mb-4'>
           <div className='flex justify-between items-center border-b-2 border-gray-300 pb-2'>
             <label className='block font-semibold text-lg'>Location</label>
-            <button onClick={() => setShowLocation(!showLocation)} className='text-blue-500 flex items-center'>
+            <button onClick={() => setShowLocation(!showLocation)} className='text-black flex items-center'>
               {showLocation ? <ChevronUpIcon className='h-5 w-5' /> : <ChevronDownIcon className='h-5 w-5' />}
             </button>
           </div>
@@ -304,7 +304,7 @@ export default function PropertyFilter({ value, onChange, onClear }: PropertyFil
         <div className='mb-4'>
           <div className='flex justify-between items-center border-b-2 border-gray-300 pb-2'>
             <label className='block font-semibold text-lg'>Square Feet</label>
-            <button onClick={() => setShowSquareFeet(!showSquareFeet)} className='text-blue-500 flex items-center'>
+            <button onClick={() => setShowSquareFeet(!showSquareFeet)} className='text-black flex items-center'>
               {showSquareFeet ? <ChevronUpIcon className='h-5 w-5' /> : <ChevronDownIcon className='h-5 w-5' />}
             </button>
           </div>
@@ -353,7 +353,7 @@ export default function PropertyFilter({ value, onChange, onClear }: PropertyFil
         <div className='mb-4'>
           <div className='flex justify-between items-center border-b-2 border-gray-300 pb-2'>
             <label className='block font-semibold text-lg'>Bedrooms</label>
-            <button onClick={() => setShowBedrooms(!showBedrooms)} className='text-blue-500 flex items-center'>
+            <button onClick={() => setShowBedrooms(!showBedrooms)} className='text-black flex items-center'>
               {showBedrooms ? <ChevronUpIcon className='h-5 w-5' /> : <ChevronDownIcon className='h-5 w-5' />}
             </button>
           </div>
@@ -377,7 +377,7 @@ export default function PropertyFilter({ value, onChange, onClear }: PropertyFil
         <div className='mb-2'>
           <div className='flex justify-between items-center border-b-2 border-gray-300 pb-2'>
             <label className='block font-semibold text-lg'>Bathrooms</label>
-            <button onClick={() => setShowBathrooms(!showBathrooms)} className='text-blue-500 flex items-center'>
+            <button onClick={() => setShowBathrooms(!showBathrooms)} className='text-black flex items-center'>
               {showBathrooms ? <ChevronUpIcon className='h-5 w-5' /> : <ChevronDownIcon className='h-5 w-5' />}
             </button>
           </div>

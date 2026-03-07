@@ -27,6 +27,7 @@ export interface ICreateProperty {
   yearBuilt: number;
   moreDetails: string;
   locationMapLink?: string;
+  isPublished?: boolean;
   IsPosted?: boolean;
   sellPostingDate?: string;
   sellPostingTime?: string;
@@ -58,6 +59,7 @@ export interface IPropertyResponse {
   isPosted?: boolean;
   sellPostingDate?: string;
   sellPostingTime?: string;
+  sellScheduleAt?: string;
   thumbnail?: string | PropertyMediaItem | null;
   images?: Array<string | PropertyMediaItem | null>;
   propertyOwner?: string | number;
@@ -110,6 +112,8 @@ export const toFormData = (data: ICreateProperty): FormData => {
 
   if (data.locationMapLink)
     formData.append("locationMapLink", data.locationMapLink);
+  if (data.isPublished !== undefined)
+    formData.append("isPublished", String(data.isPublished));
   if (data.IsPosted !== undefined)
     formData.append("IsPosted", String(data.IsPosted));
   if (data.sellPostingDate)
