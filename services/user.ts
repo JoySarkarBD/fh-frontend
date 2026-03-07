@@ -54,7 +54,7 @@ export const getUserClient = async () => {
   return resp;
 };
 
-//! initilize axios server!
+// Initialize axios server
 
 async function getAxiosInstance() {
   return await axiosServer();
