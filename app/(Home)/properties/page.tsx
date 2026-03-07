@@ -44,6 +44,8 @@ export default function Properties() {
   const [page, setPage] = useState(1);
   const debouncedFilters = useDebouncedValue(filters, 350);
   const limit = 9;
+  const locationSearch = debouncedFilters.locationText.trim().toLowerCase();
+  const isLocationFiltering = locationSearch.length > 0;
 
   const handleFilterChange = (nextFilters: PropertyFilters) => {
     setFilters(nextFilters);
@@ -58,8 +60,8 @@ export default function Properties() {
         : undefined;
 
     return {
-      page,
-      limit,
+      page: isLocationFiltering ? 1 : page,
+      limit: isLocationFiltering ? 500 : limit,
       minPrice: debouncedFilters.minPrice,
       maxPrice: debouncedFilters.maxPrice,
       type,
@@ -67,22 +69,37 @@ export default function Properties() {
       bedrooms: debouncedFilters.bedrooms,
       bathrooms: debouncedFilters.bathrooms,
     };
-  }, [debouncedFilters, page]);
+  }, [debouncedFilters, isLocationFiltering, page]);
 
   const { data, isLoading, isError, error } = useProperties(queryParams);
   const meta = data?.data?.meta;
+  const serverProperties = useMemo(
+    () => data?.data?.data ?? [],
+    [data?.data?.data]
+  );
 
-  const properties = useMemo(() => {
-    const serverProperties = data?.data?.data ?? [];
-    const locationSearch = debouncedFilters.locationText.trim().toLowerCase();
-    if (!locationSearch) return serverProperties;
-
+  const locationFilteredProperties = useMemo(() => {
+    if (!isLocationFiltering) return serverProperties;
     return serverProperties.filter((property) => {
       const address = property.address?.toLowerCase() ?? "";
       const mapLink = property.locationMapLink?.toLowerCase() ?? "";
       return address.includes(locationSearch) || mapLink.includes(locationSearch);
     });
-  }, [data?.data?.data, debouncedFilters.locationText]);
+  }, [isLocationFiltering, locationSearch, serverProperties]);
+
+  const properties = useMemo(() => {
+    if (!isLocationFiltering) return serverProperties;
+    const start = (page - 1) * limit;
+    return locationFilteredProperties.slice(start, start + limit);
+  }, [isLocationFiltering, limit, locationFilteredProperties, page, serverProperties]);
+
+  const totalItems = isLocationFiltering
+    ? locationFilteredProperties.length
+    : (meta?.total ?? 0);
+  const totalPages = isLocationFiltering
+    ? Math.ceil(totalItems / limit)
+    : (meta?.totalPage ?? 0);
+  const currentPage = isLocationFiltering ? page : (meta?.page ?? 1);
 
   return (
     <div className='flex flex-col lg:flex-row justify-center m-5 gap-6'>
@@ -99,7 +116,7 @@ export default function Properties() {
 
       <div className='flex-1'>
         <div className='mb-4 text-sm text-gray-600'>
-          Showing {properties.length} properties
+          Showing {properties.length} of {totalItems || properties.length} properties
         </div>
 
         {isLoading ? (
@@ -140,12 +157,12 @@ export default function Properties() {
                 );
               })}
             </div>
-            {meta && meta.totalPage > 1 && (
+            {totalPages > 1 && (
               <Pagination
-                currentPage={meta.page}
-                totalPages={meta.totalPage}
-                total={meta.total}
-                perPage={meta.limit}
+                currentPage={currentPage}
+                totalPages={totalPages}
+                total={totalItems}
+                perPage={limit}
                 onPageChange={(nextPage) => setPage(nextPage)}
               />
             )}

@@ -1,8 +1,15 @@
 "use client";
 
-import Location from "@/components/home/property/Location";
-import { ChevronDownIcon, ChevronUpIcon, MapPinned, MenuIcon, XIcon } from "lucide-react";
-import { useState } from "react";
+import {
+  ArrowRight,
+  ChevronDownIcon,
+  ChevronUpIcon,
+  Loader2,
+  MenuIcon,
+  Search,
+  XIcon,
+} from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 
 export interface PropertyFilters {
   minPrice: number;
@@ -29,9 +36,13 @@ export default function PropertyFilter({ value, onChange, onClear }: PropertyFil
   const [showSquareFeet, setShowSquareFeet] = useState(true);
   const [showBedrooms, setShowBedrooms] = useState(true);
   const [showBathrooms, setShowBathrooms] = useState(true);
-  const [showMapSearch, setShowMapSearch] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [squareFeetSearch, setSquareFeetSearch] = useState("");
+  const [locationInput, setLocationInput] = useState(value.locationText || "");
+  const [locationSuggestions, setLocationSuggestions] = useState<string[]>([]);
+  const [isLocationLoading, setIsLocationLoading] = useState(false);
+  const [showLocationSuggestions, setShowLocationSuggestions] = useState(false);
+  const locationRef = useRef<HTMLDivElement>(null);
 
   const baseSquareFeetOptions = [3000, 2400, 2000, 1800, 1500, 1200];
   const mergedSquareFeetOptions = Array.from(
@@ -75,6 +86,56 @@ export default function PropertyFilter({ value, onChange, onClear }: PropertyFil
       bedrooms: [],
       bathrooms: [],
     });
+  };
+
+  useEffect(() => {
+    const query = locationInput.trim();
+    if (!query) {
+      setLocationSuggestions([]);
+      setShowLocationSuggestions(false);
+      return;
+    }
+
+    const timer = setTimeout(async () => {
+      setIsLocationLoading(true);
+      try {
+        const response = await fetch(
+          `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=6&addressdetails=1`
+        );
+        const data = (await response.json()) as Array<{ display_name?: string }>;
+        const suggestions = data
+          .map((item) => item.display_name?.trim())
+          .filter((item): item is string => !!item);
+        setLocationSuggestions(suggestions);
+        setShowLocationSuggestions(suggestions.length > 0);
+      } catch {
+        setLocationSuggestions([]);
+        setShowLocationSuggestions(false);
+      } finally {
+        setIsLocationLoading(false);
+      }
+    }, 350);
+
+    return () => clearTimeout(timer);
+  }, [locationInput]);
+
+  useEffect(() => {
+    setLocationInput(value.locationText || "");
+  }, [value.locationText]);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (locationRef.current && !locationRef.current.contains(event.target as Node)) {
+        setShowLocationSuggestions(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const applyLocationSearch = () => {
+    update({ locationText: locationInput.trim() });
+    setShowLocationSuggestions(false);
   };
 
   return (
@@ -174,30 +235,66 @@ export default function PropertyFilter({ value, onChange, onClear }: PropertyFil
           </div>
           {showLocation && (
             <div className='mt-3 space-y-3'>
-              <input
-                type='text'
-                value={value.locationText}
-                onChange={(e) => update({ locationText: e.target.value })}
-                placeholder='Search by address/area...'
-                className='w-full border border-gray-300 rounded-md p-2'
-              />
-              <button
-                onClick={() => setShowMapSearch((prev) => !prev)}
-                className='w-full border border-[#619B7F] text-[#619B7F] p-2 rounded-md flex items-center justify-center gap-2'>
-                <MapPinned className='h-4 w-4' />
-                {showMapSearch ? "Hide Map Search" : "Open Map Search"}
-              </button>
-              {showMapSearch && (
-                <div className='rounded-md border border-gray-200 p-2'>
-                  <Location
-                    address={value.locationText || undefined}
-                    onLocationSelect={(location) =>
-                      update({
-                        locationText: location.address,
-                        locationCoords: { lat: location.lat, lng: location.lng },
-                      })
+              <div className='relative' ref={locationRef}>
+                <Search className='h-4 w-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2' />
+                <input
+                  type='text'
+                  value={locationInput}
+                  onChange={(e) => setLocationInput(e.target.value)}
+                  onFocus={() => {
+                    if (locationSuggestions.length > 0) setShowLocationSuggestions(true);
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      applyLocationSearch();
                     }
-                  />
+                  }}
+                  placeholder='Search by address/area...'
+                  className='w-full border border-gray-300 rounded-md p-2 pl-9 pr-20'
+                />
+                {locationInput && (
+                  <button
+                    type='button'
+                    onClick={() => {
+                      setLocationInput("");
+                      update({ locationText: "" });
+                      setShowLocationSuggestions(false);
+                    }}
+                    className='absolute right-10 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600'>
+                    <XIcon className='h-4 w-4' />
+                  </button>
+                )}
+                <button
+                  type='button'
+                  onClick={applyLocationSearch}
+                  className='absolute right-2 top-1/2 -translate-y-1/2 text-[#619B7F] hover:text-[#4a7b63]'>
+                  <ArrowRight className='h-4 w-4' />
+                </button>
+              </div>
+              {isLocationLoading && (
+                <div className='flex items-center gap-2 text-xs text-gray-500'>
+                  <Loader2 className='h-3.5 w-3.5 animate-spin' />
+                  Searching...
+                </div>
+              )}
+              {!isLocationLoading &&
+                showLocationSuggestions &&
+                locationSuggestions.length > 0 && (
+                <div className='flex flex-wrap gap-2'>
+                  {locationSuggestions.map((suggestion) => (
+                    <button
+                      key={suggestion}
+                      type='button'
+                      onClick={() => {
+                        setLocationInput(suggestion);
+                        update({ locationText: suggestion });
+                        setShowLocationSuggestions(false);
+                      }}
+                      className='text-xs px-2 py-1 rounded-full border border-[#D1CEC6] hover:border-[#619B7F] hover:text-[#619B7F] text-left'>
+                      {suggestion}
+                    </button>
+                  ))}
                 </div>
               )}
             </div>
