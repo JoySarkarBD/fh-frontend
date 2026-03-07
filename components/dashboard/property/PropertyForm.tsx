@@ -3,9 +3,19 @@
 import Image from "next/image";
 import { useState } from "react";
 
+interface PropertyFormData {
+  propertyName: string;
+  address: string;
+  propertyType: string;
+  propertyStatus: string;
+  overview: string;
+  keyFeatures: string;
+  thumbnail?: File;
+}
+
 interface PropertyFormProps {
-  formData: any;
-  updateFormData: (key: string, value: any) => void;
+  formData: PropertyFormData;
+  updateFormData: (key: keyof PropertyFormData, value: PropertyFormData[keyof PropertyFormData]) => void;
   errors: Record<string, string>;
 }
 
