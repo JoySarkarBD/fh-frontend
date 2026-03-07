@@ -1,8 +1,8 @@
 "use client";
 
+import { useUserOwnProperties } from "@/actions/hooks/property.hooks";
 import Card from "@/components/shared/Card/Card";
 import { Bath, Bed, Square } from "lucide-react";
-import { useUserOwnProperties } from "@/actions/hooks/property.hooks";
 
 const Page = () => {
   const { data, isLoading, isError } = useUserOwnProperties({ page: 1, limit: 50 });
@@ -38,7 +38,7 @@ const Page = () => {
                   },
                 ]}
                 price={p.price}
-                type="property"
+                type="own-property"
            primaryActionLabel={p.isPublished ? "View Details" : "Post Now"} // Use IsPosted instead of isPublished
               />
             ))}

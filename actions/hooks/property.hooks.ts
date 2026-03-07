@@ -1,24 +1,22 @@
 // actions/hooks/property.hooks.ts
-import {
-  useQuery,
-  useMutation,
-  useQueryClient,
-  UseQueryOptions,
-  UseMutationOptions,
-} from "@tanstack/react-query";
+import type { ApiResponse } from "@/lib/api";
 import axiosClient from "@/lib/axiosClient";
 import {
   createProperty,
   getPropertyById,
   ICreateProperty,
   IPropertyResponse,
-  Meta,
   PaginatedPropertiesResponse,
   PropertyStatus,
 } from "@/services/property";
-import type { ApiResponse } from "@/lib/api";
-import { getAllProperties, getOwnProperties } from "@/services/property.server";
-import { keepPreviousData } from "@tanstack/react-query";
+import { getOwnProperties } from "@/services/property.server";
+import {
+  useMutation,
+  UseMutationOptions,
+  useQuery,
+  useQueryClient,
+  UseQueryOptions,
+} from "@tanstack/react-query";
 
 // ============================================================================
 // Types
@@ -47,6 +45,17 @@ export interface IProperty {
   updatedAt: string;
 }
 
+export interface PropertyListQuery {
+  page?: number;
+  limit?: number;
+  minPrice?: number;
+  maxPrice?: number;
+  type?: string;
+  squareFeet?: number[];
+  bedrooms?: number[];
+  bathrooms?: number[];
+}
+
 // ============================================================================
 // Query Keys
 // ============================================================================
@@ -54,11 +63,10 @@ export interface IProperty {
 export const propertyKeys = {
   all: ["properties"] as const,
   lists: () => [...propertyKeys.all, "list"] as const,
-  list: (filters?: string) => [...propertyKeys.lists(), filters] as const,
+  list: (filters?: PropertyListQuery) => [...propertyKeys.lists(), filters ?? {}] as const,
   details: () => [...propertyKeys.all, "detail"] as const,
   detail: (id: string) => [...propertyKeys.details(), id] as const,
-  userProperties: (userId: string) =>
-    [...propertyKeys.all, "user", userId] as const,
+  userProperties: (userId: string) => [...propertyKeys.all, "user", userId] as const,
 };
 
 // ============================================================================
@@ -66,15 +74,26 @@ export const propertyKeys = {
 // ============================================================================
 
 export const useProperties = (
+  params?: PropertyListQuery,
   options?: Omit<
-    UseQueryOptions<ApiResponse<IProperty[]>>,
+    UseQueryOptions<ApiResponse<PaginatedPropertiesResponse>>,
     "queryKey" | "queryFn"
-  >,
+  >
 ) =>
-  useQuery<ApiResponse<IProperty[]>>({
-    queryKey: propertyKeys.lists(),
+  useQuery<ApiResponse<PaginatedPropertiesResponse>>({
+    queryKey: propertyKeys.list(params),
     queryFn: async () => {
-      const res = await axiosClient.get("/property");
+      const searchParams = {
+        ...(params?.page ? { page: params.page } : {}),
+        ...(params?.limit ? { limit: params.limit } : {}),
+        ...(params?.minPrice !== undefined ? { minPrice: params.minPrice } : {}),
+        ...(params?.maxPrice !== undefined ? { maxPrice: params.maxPrice } : {}),
+        ...(params?.type ? { type: params.type } : {}),
+        ...(params?.squareFeet?.length ? { squareFeet: params.squareFeet.join(",") } : {}),
+        ...(params?.bedrooms?.length ? { bedrooms: params.bedrooms.join(",") } : {}),
+        ...(params?.bathrooms?.length ? { bathrooms: params.bathrooms.join(",") } : {}),
+      };
+      const res = await axiosClient.get("/property", { params: searchParams });
       return res.data;
     },
     staleTime: 1000 * 60 * 5, // 5 minutes
@@ -83,10 +102,7 @@ export const useProperties = (
 
 export const useUserOwnProperties = (
   params?: { page?: number; limit?: number },
-  options?: Omit<
-    UseQueryOptions<ApiResponse<PaginatedPropertiesResponse>>,
-    "queryKey" | "queryFn"
-  >,
+  options?: Omit<UseQueryOptions<ApiResponse<PaginatedPropertiesResponse>>, "queryKey" | "queryFn">
 ) =>
   useQuery<ApiResponse<PaginatedPropertiesResponse>>({
     queryKey: ["properties", params],
@@ -95,60 +111,12 @@ export const useUserOwnProperties = (
     ...options,
   });
 
-export type AdminPropertiesResponse = {
-  properties: IPropertyResponse[];
-  meta: Meta;
-};
-
-export const useGetAllPropertiesAdmin = (
-  page: number = 1,
-  limit: number = 10,
-  search: string = "",
-) =>
-  useQuery<AdminPropertiesResponse, Error>({
-    queryKey: ["admin-properties", page, limit, search],
-    queryFn: async () => {
-      const res = await getAllProperties({ page, limit, search });
-      return {
-        properties: res.data?.data ?? [],
-        meta: res.data?.meta ?? {
-          page: 1,
-          limit,
-          total: 0,
-          totalPage: 1,
-        },
-      };
-    },
-    staleTime: 60 * 1000,
-    placeholderData: keepPreviousData,
-    retry: 1,
-  });
-
-export const useGetPropertyById = (id?: string) =>
-  useQuery<IPropertyResponse, Error>({
-    queryKey: ["property", id],
-    queryFn: async () => {
-      if (!id) {
-        throw new Error("No property id provided");
-      }
-      const res = await getPropertyById(id);
-      return res.data;
-    },
-    enabled: !!id,
-    staleTime: 60 * 1000,
-    retry: 1,
-  });
-
 // ============================================================================
 // MUTATIONS
 // ============================================================================
 
 export const useCreatePropertyMutation = (
-  options?: UseMutationOptions<
-    ApiResponse<IPropertyResponse>,
-    Error,
-    ICreateProperty
-  >,
+  options?: UseMutationOptions<ApiResponse<IPropertyResponse>, Error, ICreateProperty>
 ) => {
   const queryClient = useQueryClient();
 
@@ -156,17 +124,13 @@ export const useCreatePropertyMutation = (
     mutationFn: createProperty,
     onSuccess: (data, variables, context, mutation) => {
       queryClient.invalidateQueries({ queryKey: propertyKeys.lists() });
-      queryClient.invalidateQueries({
-        queryKey: propertyKeys.userProperties("me"),
-      });
+      queryClient.invalidateQueries({ queryKey: propertyKeys.userProperties("me") });
 
-      if (options?.onSuccess)
-        options.onSuccess(data, variables, context, mutation);
+      if (options?.onSuccess) options.onSuccess(data, variables, context, mutation);
     },
     onError: (error, variables, context, mutation) => {
       console.error("Create property failed:", error);
-      if (options?.onError)
-        options.onError(error, variables, context, mutation);
+      if (options?.onError) options.onError(error, variables, context, mutation);
     },
     ...options,
   });
@@ -177,7 +141,7 @@ export const useUpdatePropertyMutation = (
     ApiResponse<IPropertyResponse>,
     Error,
     { id: string; data: Partial<ICreateProperty> }
-  >,
+  >
 ) => {
   const queryClient = useQueryClient();
 
@@ -186,12 +150,9 @@ export const useUpdatePropertyMutation = (
       const formData = new FormData();
       Object.entries(data).forEach(([key, value]) => {
         if (value !== undefined && value !== null) {
-          if (key === "thumbnail" && value instanceof File)
-            formData.append("thumbnail", value);
+          if (key === "thumbnail" && value instanceof File) formData.append("thumbnail", value);
           else if (key === "images" && Array.isArray(value)) {
-            value.forEach((file) => {
-              if (file instanceof File) formData.append("images", file);
-            });
+            value.forEach((file) => { if (file instanceof File) formData.append("images", file); });
           } else formData.append(key, String(value));
         }
       });
@@ -201,25 +162,21 @@ export const useUpdatePropertyMutation = (
       return res.data;
     },
     onSuccess: (data, variables, context, mutation) => {
-      queryClient.invalidateQueries({
-        queryKey: propertyKeys.detail(variables.id),
-      });
+      queryClient.invalidateQueries({ queryKey: propertyKeys.detail(variables.id) });
       queryClient.invalidateQueries({ queryKey: propertyKeys.lists() });
 
-      if (options?.onSuccess)
-        options.onSuccess(data, variables, context, mutation);
+      if (options?.onSuccess) options.onSuccess(data, variables, context, mutation);
     },
     onError: (error, variables, context, mutation) => {
       console.error("Update property failed:", error);
-      if (options?.onError)
-        options.onError(error, variables, context, mutation);
+      if (options?.onError) options.onError(error, variables, context, mutation);
     },
     ...options,
   });
 };
 
 export const useDeletePropertyMutation = (
-  options?: UseMutationOptions<ApiResponse<null>, Error, string>,
+  options?: UseMutationOptions<ApiResponse<null>, Error, string>
 ) => {
   const queryClient = useQueryClient();
 
@@ -236,16 +193,15 @@ export const useDeletePropertyMutation = (
     },
     onError: (error, variables, context, mutation) => {
       console.error("Delete property failed:", error);
-      if (options?.onError)
-        options.onError(error, variables, context, mutation);
+      if (options?.onError) options.onError(error, variables, context, mutation);
     },
     ...options,
   });
 };
 
-// =============
+// ============================================================================
 // COMBINED HOOK
-// =============
+// ============================================================================
 
 export const useProperty = () => {
   const queryClient = useQueryClient();
@@ -271,19 +227,26 @@ export const useProperty = () => {
     delete: deleteMutation,
 
     // Utilities
-    refetchAll: () =>
-      queryClient.invalidateQueries({ queryKey: propertyKeys.all }),
+    refetchAll: () => queryClient.invalidateQueries({ queryKey: propertyKeys.all }),
     clearCache: () => queryClient.removeQueries({ queryKey: propertyKeys.all }),
 
     // Individual query states
-    queries: {
-      properties: propertiesQuery,
-      userProperties: userPropertiesQuery,
-    },
-    mutations: {
-      create: createMutation,
-      update: updateMutation,
-      delete: deleteMutation,
-    },
+    queries: { properties: propertiesQuery, userProperties: userPropertiesQuery },
+    mutations: { create: createMutation, update: updateMutation, delete: deleteMutation },
   };
 };
+
+export const usePropertyById = (
+  id: string,
+  options?: Omit<
+    UseQueryOptions<ApiResponse<IPropertyResponse>>,
+    "queryKey" | "queryFn"
+  >
+) =>
+  useQuery<ApiResponse<IPropertyResponse>>({
+    queryKey: propertyKeys.detail(id),
+    queryFn: () => getPropertyById(id),
+    enabled: !!id, // prevent running if id missing
+    staleTime: 1000 * 60 * 5, // 5 minutes
+    ...options,
+  });

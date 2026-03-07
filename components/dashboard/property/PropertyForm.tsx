@@ -11,16 +11,36 @@ interface PropertyFormData {
   overview: string;
   keyFeatures: string;
   thumbnail?: File;
+  sellPostingDate?: string;
+  sellPostingTime?: string;
+  isPublished?: boolean;
 }
 
 interface PropertyFormProps {
   formData: PropertyFormData;
   updateFormData: (key: keyof PropertyFormData, value: PropertyFormData[keyof PropertyFormData]) => void;
   errors: Record<string, string>;
+  showScheduleFields?: boolean;
+  showPublishToggle?: boolean;
+  existingThumbnailUrl?: string;
+  existingImagesUrls?: string[];
 }
 
-const PropertyForm = ({ formData, updateFormData, errors }: PropertyFormProps) => {
+const PropertyForm = ({
+  formData,
+  updateFormData,
+  errors,
+  showScheduleFields = false,
+  showPublishToggle = false,
+  existingThumbnailUrl,
+  existingImagesUrls = [],
+}: PropertyFormProps) => {
   const [thumbnailPreview, setThumbnailPreview] = useState<string | null>(null);
+  const previewSource = thumbnailPreview || existingThumbnailUrl || null;
+  const galleryImages = [
+    ...(previewSource ? [previewSource] : []),
+    ...existingImagesUrls,
+  ].filter((item, index, arr) => arr.indexOf(item) === index);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -32,11 +52,27 @@ const PropertyForm = ({ formData, updateFormData, errors }: PropertyFormProps) =
 
   return (
     <div className='mx-auto p-6 bg-white rounded-md shadow-md border border-gray-200'>
-      <h1 className='text-2xl font-semibold mb-6'>
+      <h1 className='text-2xl font-semibold mb-4'>
         Basic Property Information
       </h1>
+      {galleryImages.length > 0 && (
+        <div className='mb-6'>
+          <p className='text-sm font-medium text-gray-700 mb-2'>Image Gallery</p>
+          <div className='flex gap-2 overflow-x-auto pb-2'>
+            {galleryImages.map((url, index) => (
+              <Image
+                key={`${url}-${index}`}
+                src={url}
+                alt={`Gallery ${index + 1}`}
+                width={88}
+                height={66}
+                className='rounded-md object-cover border border-gray-200 h-[66px] w-[88px]'
+              />
+            ))}
+          </div>
+        </div>
+      )}
 
-      {/* Thumbnail Upload */}
       <div className='mb-6'>
         <label className="block text-sm font-medium text-gray-700 mb-2">
           Property Thumbnail <span className="text-red-500">*</span>
@@ -58,11 +94,10 @@ const PropertyForm = ({ formData, updateFormData, errors }: PropertyFormProps) =
         {errors.thumbnail && (
           <p className="text-red-500 text-sm mt-1">{errors.thumbnail}</p>
         )}
-        {/* Display the uploaded thumbnail */}
-        {thumbnailPreview && (
+        {previewSource && (
           <div className='mt-4 text-center'>
             <Image
-              src={thumbnailPreview}
+              src={previewSource}
               alt='Uploaded Thumbnail'
               width={200}
               height={200}
@@ -72,7 +107,6 @@ const PropertyForm = ({ formData, updateFormData, errors }: PropertyFormProps) =
         )}
       </div>
 
-      {/* Property Form Fields */}
       <div className='grid grid-cols-1 md:grid-cols-2 gap-6'>
         <div className='flex flex-col'>
           <label className='font-semibold text-gray-700 mb-2'>
@@ -140,9 +174,55 @@ const PropertyForm = ({ formData, updateFormData, errors }: PropertyFormProps) =
             <p className="text-red-500 text-sm mt-1">{errors.propertyStatus}</p>
           )}
         </div>
+
+        {showScheduleFields && (
+          <>
+            <div className='flex flex-col'>
+              <label className='font-semibold text-gray-700 mb-2'>Sale Posting Date</label>
+              <input
+                type='date'
+                className='border border-gray-300 p-3 rounded-md'
+                value={formData.sellPostingDate || ""}
+                onChange={(e) => updateFormData("sellPostingDate", e.target.value)}
+              />
+            </div>
+            <div className='flex flex-col'>
+              <label className='font-semibold text-gray-700 mb-2'>Sale Posting Time</label>
+              <input
+                type='time'
+                className='border border-gray-300 p-3 rounded-md'
+                value={formData.sellPostingTime || ""}
+                onChange={(e) => updateFormData("sellPostingTime", e.target.value)}
+              />
+            </div>
+            {showPublishToggle && (
+              <div className='md:col-span-2 flex items-center justify-between border border-gray-200 rounded-md p-3'>
+                <div>
+                  <p className='font-semibold text-gray-700'>Publish Status</p>
+                  <p className='text-xs text-gray-500'>
+                    {formData.isPublished ? "Published" : "Unpublished"}
+                  </p>
+                </div>
+                <button
+                  type='button'
+                  onClick={() =>
+                    updateFormData("isPublished", !Boolean(formData.isPublished))
+                  }
+                  className={`relative inline-flex h-6 w-12 items-center rounded-full transition ${
+                    formData.isPublished ? "bg-[#619B7F]" : "bg-gray-300"
+                  }`}>
+                  <span
+                    className={`inline-block h-5 w-5 transform rounded-full bg-white transition ${
+                      formData.isPublished ? "translate-x-6" : "translate-x-1"
+                    }`}
+                  />
+                </button>
+              </div>
+            )}
+          </>
+        )}
       </div>
 
-      {/* Overview and Key Features */}
       <div className='mt-8'>
         <div className='flex flex-col mb-6'>
           <label className='font-semibold text-gray-700 mb-2'>

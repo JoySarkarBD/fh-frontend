@@ -24,7 +24,7 @@ type BaseProps = {
 };
 
 export type PropertyCardProps = BaseProps & {
-  type: "property";
+  type: "property" | 'own-property';
   meta?: MetaItem[];
   price?: string | number;
   date?: undefined | string;
@@ -72,6 +72,9 @@ const Card: React.FC<CardProps> = (props) => {
         router.push(`/properties/${id}`);
       } else if (type === "blog") {
         router.push(`/blog/${id}`);
+      }
+     else if(type === 'own-property'){
+   router.push(`/dashboard/main/own-property/update/${id}`);
       }
     }
   };

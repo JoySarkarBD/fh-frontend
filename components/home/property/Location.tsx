@@ -11,6 +11,12 @@ interface LocationProps {
   onLocationSelect?: (location: { address: string; lat: number; lng: number }) => void;
 }
 
+interface PlaceSuggestion {
+  display_name: string;
+  lat: string;
+  lon: string;
+}
+
 export default function Location({ 
   address: initialAddress, 
   lat: initialLat, 
@@ -18,7 +24,7 @@ export default function Location({
   onLocationSelect 
 }: LocationProps) {
   const [searchQuery, setSearchQuery] = useState(initialAddress || "");
-  const [suggestions, setSuggestions] = useState<any[]>([]);
+  const [suggestions, setSuggestions] = useState<PlaceSuggestion[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [loading, setLoading] = useState(false);
   const [selectedLocation, setSelectedLocation] = useState<{
@@ -33,7 +39,6 @@ export default function Location({
   
   const [mapUrl, setMapUrl] = useState("");
   const searchRef = useRef<HTMLDivElement>(null);
-  const mapContainerRef = useRef<HTMLDivElement>(null);
 
   // Initialize map when location is selected
   useEffect(() => {
@@ -94,7 +99,7 @@ export default function Location({
   }, [searchQuery]);
 
   // Handle place selection
-  const handleSelectPlace = (place: any) => {
+  const handleSelectPlace = (place: PlaceSuggestion) => {
     const location = {
       address: place.display_name,
       lat: parseFloat(place.lat),
@@ -168,37 +173,43 @@ export default function Location({
         
         {/* Search Bar */}
         <div ref={searchRef} className='relative'>
-          <div className='flex gap-2'>
-            <div className='relative flex-1'>
-              <Search className='absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400' size={20} />
-              <input
-                type='text'
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder='Search for an address, city, or landmark...'
-                className='w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#619B7F] focus:border-transparent'
-              />
-              {searchQuery && (
-                <button
-                  onClick={clearSelection}
-                  className='absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600'
-                >
-                  <X size={18} />
-                </button>
-              )}
-            </div>
-            
+          <div className='relative flex-1'>
+            <Search className='absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400' size={20} />
+            <input
+              type='text'
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder='Search for an address, city, or landmark...'
+              className='w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#619B7F] focus:border-transparent'
+            />
+            {searchQuery && (
+              <button
+                onClick={clearSelection}
+                className='absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600'
+              >
+                <X size={18} />
+              </button>
+            )}
+          </div>
+          <div className='mt-3 grid grid-cols-1 sm:grid-cols-2 gap-2'>
+            <button
+              onClick={() => searchRef.current?.querySelector("input")?.focus()}
+              className='px-4 py-3 bg-[#619B7F] text-white rounded-lg hover:bg-[#4a7b63] transition flex items-center justify-center gap-2'
+            >
+              <Search size={18} />
+              Search Address
+            </button>
             <button
               onClick={getCurrentLocation}
               disabled={loading}
-              className='px-4 py-3 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition flex items-center gap-2 disabled:opacity-50'
+              className='px-4 py-3 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition flex items-center justify-center gap-2 disabled:opacity-50'
             >
               {loading ? (
                 <Loader2 size={20} className='animate-spin' />
               ) : (
                 <Navigation size={20} />
               )}
-              <span className='hidden sm:inline'>Current Location</span>
+              <span>Use Current Location</span>
             </button>
           </div>
 
