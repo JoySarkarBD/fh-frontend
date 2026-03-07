@@ -75,7 +75,7 @@ export default function Properties() {
   const meta = data?.data?.meta;
   const serverProperties = useMemo(
     () => data?.data?.data ?? [],
-    [data?.data?.data]
+    [data?.data?.data],
   );
 
   const locationFilteredProperties = useMemo(() => {
@@ -83,7 +83,9 @@ export default function Properties() {
     return serverProperties.filter((property) => {
       const address = property.address?.toLowerCase() ?? "";
       const mapLink = property.locationMapLink?.toLowerCase() ?? "";
-      return address.includes(locationSearch) || mapLink.includes(locationSearch);
+      return (
+        address.includes(locationSearch) || mapLink.includes(locationSearch)
+      );
     });
   }, [isLocationFiltering, locationSearch, serverProperties]);
 
@@ -91,7 +93,13 @@ export default function Properties() {
     if (!isLocationFiltering) return serverProperties;
     const start = (page - 1) * limit;
     return locationFilteredProperties.slice(start, start + limit);
-  }, [isLocationFiltering, limit, locationFilteredProperties, page, serverProperties]);
+  }, [
+    isLocationFiltering,
+    limit,
+    locationFilteredProperties,
+    page,
+    serverProperties,
+  ]);
 
   const totalItems = isLocationFiltering
     ? locationFilteredProperties.length
@@ -102,7 +110,7 @@ export default function Properties() {
   const currentPage = isLocationFiltering ? page : (meta?.page ?? 1);
 
   return (
-    <div className='flex flex-col lg:flex-row justify-center m-5 gap-6'>
+    <div className='flex flex-col lg:flex-row justify-center m-5 gap-6 md:mx-12.5 px-6 lg:px-8'>
       <div>
         <PropertyFilter
           value={filters}
@@ -116,22 +124,29 @@ export default function Properties() {
 
       <div className='flex-1'>
         <div className='mb-4 text-sm text-gray-600'>
-          Showing {properties.length} of {totalItems || properties.length} properties
+          Showing {properties.length} of {totalItems || properties.length}{" "}
+          properties
         </div>
 
         {isLoading ? (
           <div className='p-8'>Loading properties...</div>
         ) : isError ? (
-          <div className='p-8 text-red-500'>{error?.message || "Failed to load properties"}</div>
+          <div className='p-8 text-red-500'>
+            {error?.message || "Failed to load properties"}
+          </div>
         ) : properties.length === 0 ? (
-          <div className='p-8 border border-[#D1CEC6] rounded-md'>No properties found for selected filters.</div>
+          <div className='p-8 border border-[#D1CEC6] rounded-md'>
+            No properties found for selected filters.
+          </div>
         ) : (
           <>
             <div className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6'>
               {properties.map((property: IPropertyResponse) => {
                 const id = property._id ?? property.id;
-                const thumbnail = getMediaUrl(property.thumbnail) ?? "/property.png";
-                const statusLabel = property.status ?? property.propertyStatus ?? "For Sale";
+                const thumbnail =
+                  getMediaUrl(property.thumbnail) ?? "/property.png";
+                const statusLabel =
+                  property.status ?? property.propertyStatus ?? "For Sale";
 
                 return (
                   <Card
