@@ -65,17 +65,33 @@ export default function UserManagement() {
   }
 
   // Table rows
-  const tableRows = filteredUsers.map((user) => ({
-    id: user._id,
+  type TableRow = {
+    id: string;
+    image: string;
+    profileName: string;
+    email: string;
+    phone: string;
+    address: string;
+    subscription: boolean;
+    propertiesOwn: number;
+    propertiesBuy: number;
+    propertiesSell: number;
+  };
+
+  const tableRows: TableRow[] = filteredUsers.map((user) => ({
+    id: user._id ? String(user._id) : "",
     image: "/user.png",
     profileName: user.name || "Unknown",
     email: user.email || "N/A",
     phone: user.phone || "N/A",
     address: user.homeAddress || user.officeAddress || "N/A",
     subscription: user.isSubscribed ?? false,
-    propertiesOwn: 0,
-    propertiesBuy: 0,
-    propertiesSell: 0,
+    propertiesOwn:
+      typeof user.propertyOwnCount === "number" ? user.propertyOwnCount : 0,
+    propertiesBuy:
+      typeof user.propertyBuyCount === "number" ? user.propertyBuyCount : 0,
+    propertiesSell:
+      typeof user.propertySellCount === "number" ? user.propertySellCount : 0,
   }));
 
   return (
@@ -154,6 +170,7 @@ export default function UserManagement() {
                   <td className='px-6 py-4 whitespace-nowrap'>
                     <div className='w-10 h-10 rounded-full overflow-hidden bg-gray-100 border border-gray-200'>
                       <Image
+                        loading='eager'
                         src={user.image}
                         alt={user.profileName}
                         width={40}
