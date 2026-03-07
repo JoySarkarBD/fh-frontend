@@ -1,47 +1,14 @@
+"use client";
+
+import { useArticles } from "@/actions/hooks/article.hooks";
 import BlogCard from "@/components/blog/BlogCard";
 import PageTitle from "@/components/shared/pagetitle/PageTitle";
-import { Iblog } from "@/types/blog";
+import { articleToBlog } from "@/services/article";
 
-const blogs: Iblog[] = [
-  {
-    id: "1",
-    title: "10 Tips for First-Time Home Buyers",
-    description:
-      "Essential advice to help you navigate your first home purchase with confidence.",
-    date: "30 January, 2026",
-    category: "Selling Tips",
-    image: "/blog.jpg",
-  },
-  {
-    id: "2",
-    title: "10 Tips for First-Time Home Buyers",
-    description:
-      "Essential advice to help you navigate your first home purchase with confidence.",
-    date: "30 January, 2026",
-    category: "Selling Tips",
-    image: "/blog.jpg",
-  },
-  {
-    id: "3",
-    title: "10 Tips for First-Time Home Buyers",
-    description:
-      "Essential advice to help you navigate your first home purchase with confidence.",
-    date: "30 January, 2026",
-    category: "Selling Tips",
-    image: "/blog.jpg",
-  },
-  {
-    id: "4",
-    title: "10 Tips for First-Time Home Buyers",
-    description:
-      "Essential advice to help you navigate your first home purchase with confidence.",
-    date: "30 January, 2026",
-    category: "Selling Tips",
-    image: "/blog.jpg",
-  },
-];
+const Page = () => {
+  const { data, isLoading, isError, error } = useArticles();
+  const blogs = (data?.data ?? []).map(articleToBlog);
 
-const page = () => {
   return (
     <div>
       <PageTitle
@@ -49,14 +16,28 @@ const page = () => {
         subtitle='Insights and tips from our experts'
       />
       <div className='max-w-460 mx-auto px-8 mt-8 my-12'>
-        <div className='grid grid-cols-1 md:grid-cols-2 gap-6 justify-between lg:grid-cols-4'>
-          {blogs.map((blog, idx) => (
-            <BlogCard blog={blog} key={idx + 1} />
-          ))}
-        </div>
+        {isLoading && (
+          <div className='text-center py-6'>Loading articles...</div>
+        )}
+        {isError && (
+          <div className='text-center py-6 text-red-600'>
+            {error instanceof Error
+              ? error.message
+              : "Failed to load articles."}
+          </div>
+        )}
+        {!isLoading && !isError && blogs.length === 0 ? (
+          <div className='text-center py-8 text-gray-500'>No Articles</div>
+        ) : (
+          <div className='grid grid-cols-1 md:grid-cols-2 gap-6 justify-between lg:grid-cols-4'>
+            {blogs.map((blog) => (
+              <BlogCard blog={blog} key={blog.id} />
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );
 };
 
-export default page;
+export default Page;

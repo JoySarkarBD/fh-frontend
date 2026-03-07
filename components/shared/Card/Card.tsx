@@ -77,7 +77,7 @@ const Card: React.FC<CardProps> = (props) => {
   };
   return (
     <div
-      className={`rounded-lg overflow-hidden border border-[#D1CEC6] hover:border-[#8F8A7E] hover:shadow-lg  transition-colors duration-400 bg-white flex flex-col h-full ${className}`}>
+      className={`rounded-lg overflow-hidden border border-[#D1CEC6] hover:border-[#8F8A7E] hover:shadow-lg hover:bg-[#F8FAF9]  transition-colors duration-400 bg-white flex flex-col h-full ${className}`}>
       {imageUrl && (
         <div className='relative h-64 w-full'>
           <Image
@@ -108,7 +108,9 @@ const Card: React.FC<CardProps> = (props) => {
         {subtitle && (
           <div
             className={
-              type === "blog" ? "text-gray-500 mb-4" : "text-[12px] mb-4"
+              type === "blog"
+                ? "text-gray-500 mb-4 line-clamp-1"
+                : "text-[12px] mb-4"
             }>
             {subtitle}
           </div>
@@ -129,7 +131,10 @@ const Card: React.FC<CardProps> = (props) => {
 
         {children}
 
-        {(price || date || onPrimaryAction) && (
+        {(price !== undefined ||
+          date ||
+          onPrimaryAction ||
+          (type === "blog" && id && primaryActionLabel)) && (
           <div className='flex items-center justify-between mt-4'>
             <div className='text-[16px] font-bold'>
               {price !== undefined
