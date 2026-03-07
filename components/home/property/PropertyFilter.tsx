@@ -1,60 +1,60 @@
 "use client";
-import { ChevronDownIcon, ChevronUpIcon, MenuIcon, XIcon } from "lucide-react";
+
+import Location from "@/components/home/property/Location";
+import { ChevronDownIcon, ChevronUpIcon, MapPinned, MenuIcon, XIcon } from "lucide-react";
 import { useState } from "react";
 
-/**
- * Defines the filter state for property filter.
- * @typedef {Object} FilterState
- * @property {number[]} priceRange - The range of prices selected by the user.
- * @property {string} propertyType - The selected property type.
- * @property {string[]} location - The selected locations.
- * @property {number[]} squareFeet - The selected square feet sizes.
- * @property {number[]} bedrooms - The selected number of bedrooms.
- * @property {number[]} bathrooms - The selected number of bathrooms.
- */
-interface FilterState {
-  priceRange: [number, number];
+export interface PropertyFilters {
+  minPrice: number;
+  maxPrice: number;
   propertyType: string;
-  location: string[];
+  locationText: string;
+  locationCoords?: { lat: number; lng: number };
   squareFeet: number[];
   bedrooms: number[];
   bathrooms: number[];
 }
 
-export default function PropertyFilter() {
-  const [filters, setFilters] = useState<FilterState>({
-    priceRange: [0, 10000],
-    propertyType: "All Property",
-    location: [],
-    squareFeet: [],
-    bedrooms: [],
-    bathrooms: [],
-  });
+interface PropertyFilterProps {
+  value: PropertyFilters;
+  onChange: (next: PropertyFilters) => void;
+  onClear?: () => void;
+}
 
+const DEFAULT_MAX_PRICE = 10000000;
+
+export default function PropertyFilter({ value, onChange, onClear }: PropertyFilterProps) {
   const [showPropertyType, setShowPropertyType] = useState(true);
   const [showLocation, setShowLocation] = useState(true);
   const [showSquareFeet, setShowSquareFeet] = useState(true);
   const [showBedrooms, setShowBedrooms] = useState(true);
-
   const [showBathrooms, setShowBathrooms] = useState(true);
-
+  const [showMapSearch, setShowMapSearch] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
-  /**
-   * Applies the selected filters and logs them to the console.
-   */
-  const applyFilters = () => {
-    console.log(filters);
+  const update = (patch: Partial<PropertyFilters>) => {
+    onChange({ ...value, ...patch });
   };
 
-  /**
-   * Clears all the selected filters and resets the filter state to default values.
-   */
-  const clearFilters = () => {
-    setFilters({
-      priceRange: [0, 10000],
+  const toggleNumberFilter = (key: "squareFeet" | "bedrooms" | "bathrooms", item: number) => {
+    const source = value[key];
+    const next = source.includes(item)
+      ? source.filter((n) => n !== item)
+      : [...source, item];
+    update({ [key]: next } as Pick<PropertyFilters, typeof key>);
+  };
+
+  const handleClear = () => {
+    if (onClear) {
+      onClear();
+      return;
+    }
+
+    onChange({
+      minPrice: 0,
+      maxPrice: DEFAULT_MAX_PRICE,
       propertyType: "All Property",
-      location: [],
+      locationText: "",
       squareFeet: [],
       bedrooms: [],
       bathrooms: [],
@@ -63,116 +63,83 @@ export default function PropertyFilter() {
 
   return (
     <div className='w-full'>
-      {/* Hamburger Menu Icon for Mobile */}
       <div className='lg:hidden flex justify-between mb-4'>
         <button
           onClick={() => setSidebarOpen(!sidebarOpen)}
           className='text-[#619B7F] p-2 rounded-md'>
-          {sidebarOpen ? (
-            <XIcon className='h-6 w-6' />
-          ) : (
-            <MenuIcon className='h-6 w-6' />
-          )}
+          {sidebarOpen ? <XIcon className='h-6 w-6' /> : <MenuIcon className='h-6 w-6' />}
         </button>
       </div>
 
-      {/* Sidebar */}
       <div
-        className={`${
-          sidebarOpen ? "block" : "hidden"
-        } lg:block w-full md:w-[300px] p-6 border border-gray-300 rounded-lg`}>
+        className={`${sidebarOpen ? "block" : "hidden"} lg:block w-full md:w-[320px] p-6 border border-gray-300 rounded-lg`}>
         <div className='flex justify-between mb-4'>
           <h2 className='text-xl font-semibold'>Filters</h2>
-          <button
-            className='text-red-500 cursor-pointer'
-            onClick={clearFilters}>
+          <button className='text-red-500 cursor-pointer' onClick={handleClear}>
             Clear
           </button>
         </div>
 
-        {/* Price Range Filter */}
         <div className='mb-4'>
           <label className='block font-semibold text-lg border-b-2 border-gray-300 mb-5 pb-2'>
             Price Range
           </label>
-          <div className='flex justify-between items-center mt-2'>
-            <div className='text-gray-500 text-sm'>
-              ${filters.priceRange[0]}
-            </div>
-            <div className='text-gray-500 text-sm'>
-              ${filters.priceRange[1]}
-            </div>
+          <div className='flex justify-between items-center mt-2 text-sm text-gray-500'>
+            <span>${value.minPrice.toLocaleString()}</span>
+            <span>${value.maxPrice.toLocaleString()}</span>
           </div>
-          <input
-            type='range'
-            min='0'
-            max='10000'
-            value={filters.priceRange[0]}
-            onChange={(e) =>
-              setFilters({
-                ...filters,
-                priceRange: [Number(e.target.value), filters.priceRange[1]],
-              })
-            }
-            className='w-full bg-[#E0E0E0] h-2 rounded-lg'
-          />
-          <div className='flex'>
+          <div className='mt-3 space-y-2'>
             <input
-              type='number'
-              value={filters.priceRange[0]}
+              type='range'
+              min={0}
+              max={DEFAULT_MAX_PRICE}
+              step={1000}
+              value={value.maxPrice}
               onChange={(e) =>
-                setFilters({
-                  ...filters,
-                  priceRange: [Number(e.target.value), filters.priceRange[1]],
+                update({
+                  maxPrice: Math.max(Number(e.target.value), value.minPrice),
                 })
               }
-              className='w-1/2 border border-gray-300 rounded-md p-2 mt-2'
+              className='w-full accent-[#619B7F]'
+            />
+          </div>
+          <div className='grid grid-cols-2 gap-2'>
+            <input
+              type='number'
+              min={0}
+              value={value.minPrice}
+              onChange={(e) => update({ minPrice: Number(e.target.value) || 0 })}
+              className='border border-gray-300 rounded-md p-2'
+              placeholder='Min'
             />
             <input
               type='number'
-              value={filters.priceRange[1]}
-              onChange={(e) =>
-                setFilters({
-                  ...filters,
-                  priceRange: [filters.priceRange[0], Number(e.target.value)],
-                })
-              }
-              className='w-1/2 border border-gray-300 rounded-md p-2 mt-2 ml-2'
+              min={0}
+              value={value.maxPrice}
+              onChange={(e) => update({ maxPrice: Number(e.target.value) || DEFAULT_MAX_PRICE })}
+              className='border border-gray-300 rounded-md p-2'
+              placeholder='Max'
             />
           </div>
         </div>
 
-        {/* Property Type Filter */}
         <div className='mb-4'>
           <div className='flex justify-between items-center border-b-2 border-gray-300 pb-2'>
             <label className='block font-semibold text-lg'>Property Type</label>
-            <button
-              onClick={() => setShowPropertyType(!showPropertyType)}
-              className='text-blue-500 flex items-center'>
-              {showPropertyType ? (
-                <ChevronUpIcon className='h-5 w-5' />
-              ) : (
-                <ChevronDownIcon className='h-5 w-5' />
-              )}
+            <button onClick={() => setShowPropertyType(!showPropertyType)} className='text-blue-500 flex items-center'>
+              {showPropertyType ? <ChevronUpIcon className='h-5 w-5' /> : <ChevronDownIcon className='h-5 w-5' />}
             </button>
           </div>
           {showPropertyType && (
             <div className='flex flex-col mt-2'>
-              {[
-                "All Property",
-                "Luxury Property",
-                "Duplex Property",
-                "Apartment",
-              ].map((type) => (
+              {["All Property", "Apartment", "Duplex", "Luxury Property", "Land"].map((type) => (
                 <label key={type} className='flex items-center space-x-2'>
                   <input
                     type='radio'
                     name='propertyType'
                     value={type}
-                    checked={filters.propertyType === type}
-                    onChange={() =>
-                      setFilters({ ...filters, propertyType: type })
-                    }
+                    checked={value.propertyType === type}
+                    onChange={() => update({ propertyType: type })}
                     className='border-gray-300'
                   />
                   <span>{type}</span>
@@ -182,72 +149,50 @@ export default function PropertyFilter() {
           )}
         </div>
 
-        {/* Location Filter */}
         <div className='mb-4'>
           <div className='flex justify-between items-center border-b-2 border-gray-300 pb-2'>
             <label className='block font-semibold text-lg'>Location</label>
-            <button
-              onClick={() => setShowLocation(!showLocation)}
-              className='text-blue-500 flex items-center'>
-              {showLocation ? (
-                <ChevronUpIcon className='h-5 w-5' />
-              ) : (
-                <ChevronDownIcon className='h-5 w-5' />
-              )}
+            <button onClick={() => setShowLocation(!showLocation)} className='text-blue-500 flex items-center'>
+              {showLocation ? <ChevronUpIcon className='h-5 w-5' /> : <ChevronDownIcon className='h-5 w-5' />}
             </button>
           </div>
           {showLocation && (
-            <div className='flex flex-col mt-2'>
-              {[
-                "Rampura",
-                "Gulshan",
-                "Banani",
-                "Dhanmondi",
-                "Khilgaon",
-                "Mohammadpur",
-              ].map((location) => (
-                <label
-                  key={location}
-                  className='flex items-center space-x-2 mb-2'>
-                  <input
-                    type='checkbox'
-                    checked={filters.location.includes(location)}
-                    onChange={() => {
-                      if (filters.location.includes(location)) {
-                        setFilters({
-                          ...filters,
-                          location: filters.location.filter(
-                            (loc) => loc !== location,
-                          ),
-                        });
-                      } else {
-                        setFilters({
-                          ...filters,
-                          location: [...filters.location, location],
-                        });
-                      }
-                    }}
-                    className='border-gray-300'
+            <div className='mt-3 space-y-3'>
+              <input
+                type='text'
+                value={value.locationText}
+                onChange={(e) => update({ locationText: e.target.value })}
+                placeholder='Search by address/area...'
+                className='w-full border border-gray-300 rounded-md p-2'
+              />
+              <button
+                onClick={() => setShowMapSearch((prev) => !prev)}
+                className='w-full border border-[#619B7F] text-[#619B7F] p-2 rounded-md flex items-center justify-center gap-2'>
+                <MapPinned className='h-4 w-4' />
+                {showMapSearch ? "Hide Map Search" : "Open Map Search"}
+              </button>
+              {showMapSearch && (
+                <div className='rounded-md border border-gray-200 p-2'>
+                  <Location
+                    address={value.locationText || undefined}
+                    onLocationSelect={(location) =>
+                      update({
+                        locationText: location.address,
+                        locationCoords: { lat: location.lat, lng: location.lng },
+                      })
+                    }
                   />
-                  <span>{location}</span>
-                </label>
-              ))}
+                </div>
+              )}
             </div>
           )}
         </div>
 
-        {/* Square Feet Filter */}
         <div className='mb-4'>
           <div className='flex justify-between items-center border-b-2 border-gray-300 pb-2'>
             <label className='block font-semibold text-lg'>Square Feet</label>
-            <button
-              onClick={() => setShowSquareFeet(!showSquareFeet)}
-              className='text-blue-500 flex items-center'>
-              {showSquareFeet ? (
-                <ChevronUpIcon className='h-5 w-5' />
-              ) : (
-                <ChevronDownIcon className='h-5 w-5' />
-              )}
+            <button onClick={() => setShowSquareFeet(!showSquareFeet)} className='text-blue-500 flex items-center'>
+              {showSquareFeet ? <ChevronUpIcon className='h-5 w-5' /> : <ChevronDownIcon className='h-5 w-5' />}
             </button>
           </div>
           {showSquareFeet && (
@@ -256,22 +201,8 @@ export default function PropertyFilter() {
                 <label key={size} className='flex items-center space-x-2 mb-2'>
                   <input
                     type='checkbox'
-                    checked={filters.squareFeet.includes(size)}
-                    onChange={() => {
-                      if (filters.squareFeet.includes(size)) {
-                        setFilters({
-                          ...filters,
-                          squareFeet: filters.squareFeet.filter(
-                            (s) => s !== size,
-                          ),
-                        });
-                      } else {
-                        setFilters({
-                          ...filters,
-                          squareFeet: [...filters.squareFeet, size],
-                        });
-                      }
-                    }}
+                    checked={value.squareFeet.includes(size)}
+                    onChange={() => toggleNumberFilter("squareFeet", size)}
                     className='border-gray-300'
                   />
                   <span>{size}</span>
@@ -281,18 +212,11 @@ export default function PropertyFilter() {
           )}
         </div>
 
-        {/* Bedrooms Filter */}
         <div className='mb-4'>
           <div className='flex justify-between items-center border-b-2 border-gray-300 pb-2'>
             <label className='block font-semibold text-lg'>Bedrooms</label>
-            <button
-              onClick={() => setShowBedrooms(!showBedrooms)}
-              className='text-blue-500 flex items-center'>
-              {showBedrooms ? (
-                <ChevronUpIcon className='h-5 w-5' />
-              ) : (
-                <ChevronDownIcon className='h-5 w-5' />
-              )}
+            <button onClick={() => setShowBedrooms(!showBedrooms)} className='text-blue-500 flex items-center'>
+              {showBedrooms ? <ChevronUpIcon className='h-5 w-5' /> : <ChevronDownIcon className='h-5 w-5' />}
             </button>
           </div>
           {showBedrooms && (
@@ -301,20 +225,8 @@ export default function PropertyFilter() {
                 <label key={bed} className='flex items-center space-x-2 mb-2'>
                   <input
                     type='checkbox'
-                    checked={filters.bedrooms.includes(bed)}
-                    onChange={() => {
-                      if (filters.bedrooms.includes(bed)) {
-                        setFilters({
-                          ...filters,
-                          bedrooms: filters.bedrooms.filter((b) => b !== bed),
-                        });
-                      } else {
-                        setFilters({
-                          ...filters,
-                          bedrooms: [...filters.bedrooms, bed],
-                        });
-                      }
-                    }}
+                    checked={value.bedrooms.includes(bed)}
+                    onChange={() => toggleNumberFilter("bedrooms", bed)}
                     className='border-gray-300'
                   />
                   <span>{bed}</span>
@@ -324,18 +236,11 @@ export default function PropertyFilter() {
           )}
         </div>
 
-        {/* Bathrooms Filter */}
-        <div className='mb-4'>
+        <div className='mb-2'>
           <div className='flex justify-between items-center border-b-2 border-gray-300 pb-2'>
             <label className='block font-semibold text-lg'>Bathrooms</label>
-            <button
-              onClick={() => setShowBathrooms(!showBathrooms)}
-              className='text-blue-500 flex items-center'>
-              {showBathrooms ? (
-                <ChevronUpIcon className='h-5 w-5' />
-              ) : (
-                <ChevronDownIcon className='h-5 w-5' />
-              )}
+            <button onClick={() => setShowBathrooms(!showBathrooms)} className='text-blue-500 flex items-center'>
+              {showBathrooms ? <ChevronUpIcon className='h-5 w-5' /> : <ChevronDownIcon className='h-5 w-5' />}
             </button>
           </div>
           {showBathrooms && (
@@ -344,22 +249,8 @@ export default function PropertyFilter() {
                 <label key={bath} className='flex items-center space-x-2 mb-2'>
                   <input
                     type='checkbox'
-                    checked={filters.bathrooms.includes(bath)}
-                    onChange={() => {
-                      if (filters.bathrooms.includes(bath)) {
-                        setFilters({
-                          ...filters,
-                          bathrooms: filters.bathrooms.filter(
-                            (b) => b !== bath,
-                          ),
-                        });
-                      } else {
-                        setFilters({
-                          ...filters,
-                          bathrooms: [...filters.bathrooms, bath],
-                        });
-                      }
-                    }}
+                    checked={value.bathrooms.includes(bath)}
+                    onChange={() => toggleNumberFilter("bathrooms", bath)}
                     className='border-gray-300'
                   />
                   <span>{bath}</span>
@@ -368,13 +259,6 @@ export default function PropertyFilter() {
             </div>
           )}
         </div>
-
-        {/* Apply Filters Button */}
-        <button
-          onClick={applyFilters}
-          className='w-full bg-[#619B7F] text-white p-2 rounded-md'>
-          Apply Filters
-        </button>
       </div>
     </div>
   );

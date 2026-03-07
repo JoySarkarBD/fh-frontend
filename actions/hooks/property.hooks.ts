@@ -45,6 +45,17 @@ export interface IProperty {
   updatedAt: string;
 }
 
+export interface PropertyListQuery {
+  page?: number;
+  limit?: number;
+  minPrice?: number;
+  maxPrice?: number;
+  type?: string;
+  squareFeet?: number[];
+  bedrooms?: number[];
+  bathrooms?: number[];
+}
+
 // ============================================================================
 // Query Keys
 // ============================================================================
@@ -52,7 +63,7 @@ export interface IProperty {
 export const propertyKeys = {
   all: ["properties"] as const,
   lists: () => [...propertyKeys.all, "list"] as const,
-  list: (filters?: string) => [...propertyKeys.lists(), filters] as const,
+  list: (filters?: PropertyListQuery) => [...propertyKeys.lists(), filters ?? {}] as const,
   details: () => [...propertyKeys.all, "detail"] as const,
   detail: (id: string) => [...propertyKeys.details(), id] as const,
   userProperties: (userId: string) => [...propertyKeys.all, "user", userId] as const,
@@ -63,12 +74,26 @@ export const propertyKeys = {
 // ============================================================================
 
 export const useProperties = (
-  options?: Omit<UseQueryOptions<ApiResponse<IProperty[]>>, "queryKey" | "queryFn">
+  params?: PropertyListQuery,
+  options?: Omit<
+    UseQueryOptions<ApiResponse<PaginatedPropertiesResponse>>,
+    "queryKey" | "queryFn"
+  >
 ) =>
-  useQuery<ApiResponse<IProperty[]>>({
-    queryKey: propertyKeys.lists(),
+  useQuery<ApiResponse<PaginatedPropertiesResponse>>({
+    queryKey: propertyKeys.list(params),
     queryFn: async () => {
-      const res = await axiosClient.get("/property");
+      const searchParams = {
+        ...(params?.page ? { page: params.page } : {}),
+        ...(params?.limit ? { limit: params.limit } : {}),
+        ...(params?.minPrice !== undefined ? { minPrice: params.minPrice } : {}),
+        ...(params?.maxPrice !== undefined ? { maxPrice: params.maxPrice } : {}),
+        ...(params?.type ? { type: params.type } : {}),
+        ...(params?.squareFeet?.length ? { squareFeet: params.squareFeet.join(",") } : {}),
+        ...(params?.bedrooms?.length ? { bedrooms: params.bedrooms.join(",") } : {}),
+        ...(params?.bathrooms?.length ? { bathrooms: params.bathrooms.join(",") } : {}),
+      };
+      const res = await axiosClient.get("/property", { params: searchParams });
       return res.data;
     },
     staleTime: 1000 * 60 * 5, // 5 minutes
