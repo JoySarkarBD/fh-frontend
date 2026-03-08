@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
+import { useAdminDashboardStats } from "@/actions/hooks/user.hooks";
 import {
   Line,
   LineChart,
@@ -40,10 +41,22 @@ export default function DashboardRightGraph() {
     { month: "Dec", sales: 4100 },
   ];
 
-  const userDistributionData = [
-    { name: "Free", value: 200, color: "#D1E3D9" },
-    { name: "Premium", value: 500, color: "#619B7F" },
-  ];
+  const { data: stats, isLoading: statsLoading } = useAdminDashboardStats();
+  const userDistributionData = useMemo(() => {
+    if (!stats) {
+      return [
+        { name: "Free", value: 0, color: "#D1E3D9" },
+        { name: "Premium", value: 0, color: "#619B7F" },
+      ];
+    }
+    const premium = stats.activeSubscribers ?? 0;
+    const total = stats.totalUsers ?? 0;
+    const free = Math.max(total - premium, 0);
+    return [
+      { name: "Free", value: free, color: "#D1E3D9" },
+      { name: "Premium", value: premium, color: "#619B7F" },
+    ];
+  }, [stats]);
 
   const renderActiveShape = ({
     cx,
@@ -170,47 +183,59 @@ export default function DashboardRightGraph() {
           User Distribution
         </p>
         <div className='flex flex-col items-center w-full'>
-          <div className='w-full h-60 md:h-80 -ml-3 md:ml-0'>
-            <ResponsiveContainer width='100%' height='100%'>
-              <PieChart
-                margin={{
-                  top: 0,
-                  right: isMobile ? 40 : 80,
-                  bottom: 0,
-                  left: isMobile ? 40 : 80,
-                }}>
-                <Pie
-                  activeShape={renderActiveShape}
-                  data={userDistributionData}
-                  cx='50%'
-                  cy='50%'
-                  innerRadius='40%'
-                  outerRadius='70%'
-                  startAngle={90}
-                  endAngle={-270}
-                  dataKey='value'
-                  isAnimationActive={true}>
-                  {userDistributionData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.color} />
-                  ))}
-                </Pie>
-                <Tooltip content={() => null} />
-              </PieChart>
-            </ResponsiveContainer>
-          </div>
-          <div className='flex flex-wrap gap-4 md:gap-6 mt-4 md:mt-6 justify-center'>
-            {userDistributionData.map((item) => (
-              <div key={item.name} className='flex items-center gap-2 -mt-5'>
-                <div
-                  className='w-3 h-3 md:w-4 md:h-4 rounded'
-                  style={{ backgroundColor: item.color }}
-                />
-                <span className='text-xs md:text-lg font-medium text-[#304C3E]'>
-                  {item.name}: {item.value}
-                </span>
+          {statsLoading ? (
+            <div className='w-full h-60 md:h-80 flex items-center justify-center'>
+              <span className='text-[#70706C] text-lg'>
+                Loading user distribution...
+              </span>
+            </div>
+          ) : (
+            <>
+              <div className='w-full h-60 md:h-80 -ml-3 md:ml-0'>
+                <ResponsiveContainer width='100%' height='100%'>
+                  <PieChart
+                    margin={{
+                      top: 0,
+                      right: isMobile ? 40 : 80,
+                      bottom: 0,
+                      left: isMobile ? 40 : 80,
+                    }}>
+                    <Pie
+                      activeShape={renderActiveShape}
+                      data={userDistributionData}
+                      cx='50%'
+                      cy='50%'
+                      innerRadius='40%'
+                      outerRadius='70%'
+                      startAngle={90}
+                      endAngle={-270}
+                      dataKey='value'
+                      isAnimationActive={true}>
+                      {userDistributionData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={entry.color} />
+                      ))}
+                    </Pie>
+                    <Tooltip content={() => null} />
+                  </PieChart>
+                </ResponsiveContainer>
               </div>
-            ))}
-          </div>
+              <div className='flex flex-wrap gap-4 md:gap-6 mt-4 md:mt-6 justify-center'>
+                {userDistributionData.map((item) => (
+                  <div
+                    key={item.name}
+                    className='flex items-center gap-2 -mt-5'>
+                    <div
+                      className='w-3 h-3 md:w-4 md:h-4 rounded'
+                      style={{ backgroundColor: item.color }}
+                    />
+                    <span className='text-xs md:text-lg font-medium text-[#304C3E]'>
+                      {item.name}: {item.value}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
         </div>
       </div>
     </div>

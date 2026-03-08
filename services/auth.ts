@@ -51,6 +51,10 @@ export type AddAddressPayload = {
 export type UpdateProfilePayload = {
   name?: string;
   phone?: string;
+  facebookLink?: string;
+  instagramLink?: string;
+  twitterLink?: string;
+  linkedinLink?: string;
 };
 
 interface ApiResponse<T> {

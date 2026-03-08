@@ -1,7 +1,11 @@
 "use client";
 
-import { CreateSubscription } from "@/services/subscription";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import {
+  CreateSubscription,
+  getMyPaymentHistory,
+  type PaymentHistoryItem,
+} from "@/services/subscription";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 // Define the response type of your API
 interface SubscriptionResponse {
@@ -21,6 +25,7 @@ export const useSubscriptionMutations = () => {
     onSuccess: () => {
       // Refetch subscriptions list
       queryClient.invalidateQueries({ queryKey: ["subscriptions"] });
+      queryClient.invalidateQueries({ queryKey: ["subscription-history"] });
     },
 
     onError: (error) => {
@@ -47,4 +52,13 @@ export const useSubscriptionMutations = () => {
     // utilities
     reset: createMutation.reset,
   };
+};
+
+export const useMyPaymentHistory = () => {
+  return useQuery<PaymentHistoryItem[], Error>({
+    queryKey: ["subscription-history"],
+    queryFn: getMyPaymentHistory,
+    staleTime: 60 * 1000,
+    retry: 1,
+  });
 };

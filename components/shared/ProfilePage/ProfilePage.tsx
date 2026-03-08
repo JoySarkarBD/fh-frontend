@@ -111,10 +111,27 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ initialProfile }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [editName, setEditName] = useState<string>(profileData?.name ?? "");
   const [editPhone, setEditPhone] = useState<string>(profileData?.phone ?? "");
+  const [editFacebook, setEditFacebook] = useState<string>(
+    profileData?.facebookLink ?? "",
+  );
+  const [editInstagram, setEditInstagram] = useState<string>(
+    profileData?.instagramLink ?? "",
+  );
+  const [editTwitter, setEditTwitter] = useState<string>(
+    profileData?.twitterLink ?? "",
+  );
+  const [editLinkedin, setEditLinkedin] = useState<string>(
+    profileData?.linkedinLink ?? "",
+  );
+  const isAdmin = String(profileData?.role ?? "").toUpperCase() === "ADMIN";
 
   const startEdit = () => {
     setEditName(profileData?.name ?? "");
     setEditPhone(profileData?.phone ?? "");
+    setEditFacebook(profileData?.facebookLink ?? "");
+    setEditInstagram(profileData?.instagramLink ?? "");
+    setEditTwitter(profileData?.twitterLink ?? "");
+    setEditLinkedin(profileData?.linkedinLink ?? "");
     setIsEditing(true);
   };
 
@@ -122,6 +139,10 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ initialProfile }) => {
     setIsEditing(false);
     setEditName(profileData?.name ?? "");
     setEditPhone(profileData?.phone ?? "");
+    setEditFacebook(profileData?.facebookLink ?? "");
+    setEditInstagram(profileData?.instagramLink ?? "");
+    setEditTwitter(profileData?.twitterLink ?? "");
+    setEditLinkedin(profileData?.linkedinLink ?? "");
     setAddError("");
   };
 
@@ -131,6 +152,14 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ initialProfile }) => {
       updateProfileMutation.mutate({
         name: editName,
         phone: editPhone,
+        ...(isAdmin
+          ? {
+              facebookLink: editFacebook,
+              instagramLink: editInstagram,
+              twitterLink: editTwitter,
+              linkedinLink: editLinkedin,
+            }
+          : {}),
       });
     } catch (err) {
       setAddError(
@@ -165,7 +194,8 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ initialProfile }) => {
     }
   };
 
-  const isLoading = updateProfileMutation.isPending || addAddressMutation.isPending;
+  const isLoading =
+    updateProfileMutation.isPending || addAddressMutation.isPending;
 
   if (!profileData) {
     return (
@@ -328,6 +358,78 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ initialProfile }) => {
                   className='w-full border border-[#D1CEC6] rounded-lg px-3 py-2 text-sm text-[#70706C] focus:outline-none'
                 />
               </div>
+
+              {isAdmin && (
+                <>
+                  <div>
+                    <label className='block text-sm text-[#1B1B1A] font-medium mb-1.5'>
+                      Facebook
+                    </label>
+                    <input
+                      value={
+                        isEditing
+                          ? editFacebook
+                          : (profileData?.facebookLink ?? "")
+                      }
+                      onChange={(e) => setEditFacebook(e.target.value)}
+                      readOnly={!isEditing}
+                      className='w-full border border-[#D1CEC6] rounded-lg px-3 py-2 text-sm text-[#70706C] focus:outline-none focus:border-[#619B7F]'
+                      placeholder='Facebook profile link'
+                    />
+                  </div>
+
+                  <div>
+                    <label className='block text-sm text-[#1B1B1A] font-medium mb-1.5'>
+                      Instagram
+                    </label>
+                    <input
+                      value={
+                        isEditing
+                          ? editInstagram
+                          : (profileData?.instagramLink ?? "")
+                      }
+                      onChange={(e) => setEditInstagram(e.target.value)}
+                      readOnly={!isEditing}
+                      className='w-full border border-[#D1CEC6] rounded-lg px-3 py-2 text-sm text-[#70706C] focus:outline-none focus:border-[#619B7F]'
+                      placeholder='Instagram profile link'
+                    />
+                  </div>
+
+                  <div>
+                    <label className='block text-sm text-[#1B1B1A] font-medium mb-1.5'>
+                      Twitter
+                    </label>
+                    <input
+                      value={
+                        isEditing
+                          ? editTwitter
+                          : (profileData?.twitterLink ?? "")
+                      }
+                      onChange={(e) => setEditTwitter(e.target.value)}
+                      readOnly={!isEditing}
+                      className='w-full border border-[#D1CEC6] rounded-lg px-3 py-2 text-sm text-[#70706C] focus:outline-none focus:border-[#619B7F]'
+                      placeholder='Twitter profile link'
+                    />
+                  </div>
+
+                  <div>
+                    <label className='block text-sm text-[#1B1B1A] font-medium mb-1.5'>
+                      LinkedIn
+                    </label>
+                    <input
+                      value={
+                        isEditing
+                          ? editLinkedin
+                          : (profileData?.linkedinLink ?? "")
+                      }
+                      onChange={(e) => setEditLinkedin(e.target.value)}
+                      readOnly={!isEditing}
+                      className='w-full border border-[#D1CEC6] rounded-lg px-3 py-2 text-sm text-[#70706C] focus:outline-none focus:border-[#619B7F]'
+                      placeholder='LinkedIn profile link'
+                    />
+                  </div>
+                </>
+              )}
             </div>
           </div>
         </div>

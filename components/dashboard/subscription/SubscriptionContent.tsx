@@ -1,7 +1,24 @@
+"use client";
+
 import { Check } from "lucide-react";
+
 import SubscriptionButton from "./SubscriptionButton";
+import { useEffect, useState } from "react";
+import axiosClient from "@/lib/axiosClient";
 
 export default function SubscriptionContent() {
+  const [isSubscribed, setIsSubscribed] = useState(false);
+
+  useEffect(() => {
+    // Fetch user subscription status
+    axiosClient
+      .get("/users/me")
+      .then((res) => {
+        setIsSubscribed(!!res.data?.data?.isSubscribed);
+      })
+      .catch(() => setIsSubscribed(false));
+  }, []);
+
   const subscriptionData = [
     {
       plan: "Free Plan",
@@ -10,8 +27,8 @@ export default function SubscriptionContent() {
       priceType: "",
       description:
         "Perfect for new users, early-stage buyers, and casual visitors.",
-      buttonText: "Free Plan",
-      status: "active",
+      buttonText: isSubscribed ? "Switch to Free" : "Free Plan",
+      status: !isSubscribed ? "active" : "inactive",
       features: [
         "Public property browsing (Buy/Rent)",
         "Basic property search and filters",
@@ -32,8 +49,8 @@ export default function SubscriptionContent() {
       priceType: "Life Time",
       description:
         "Perfect for new users, early-stage buyers, and casual visitors",
-      buttonText: "Get Started",
-      status: "inactive",
+      buttonText: isSubscribed ? "Current Plan" : "Get Started",
+      status: isSubscribed ? "active" : "inactive",
       features: [
         "Unlimited saved properties",
         "All premium services and Messaging",
@@ -74,7 +91,11 @@ export default function SubscriptionContent() {
               </p>
             </div>
             <div className='my-6 md:my-9'>
-           <SubscriptionButton status={subscription.status} text={subscription.buttonText}/>
+              <SubscriptionButton
+                status={subscription.status}
+                text={subscription.buttonText}
+                disabled={isSubscribed && subscription.plan === "Premium"}
+              />
             </div>
 
             <div className=''>
