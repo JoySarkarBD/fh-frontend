@@ -1,4 +1,9 @@
-import { getUserClient, UsersResponse } from "@/services/user";
+import {
+  DashboardStatsResponse,
+  getAdminDashboardStats,
+  getUserClient,
+  UsersResponse,
+} from "@/services/user";
 import { getAllUsers } from "@/services/user";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { getUserById } from "@/services/user";
@@ -55,6 +60,15 @@ export const useGetUserById = (id?: string) => {
     queryFn: () =>
       id ? getUserById(id) : Promise.reject("No user id provided"),
     enabled: !!id,
+    staleTime: 60 * 1000,
+    retry: 1,
+  });
+};
+
+export const useAdminDashboardStats = () => {
+  return useQuery<DashboardStatsResponse, Error>({
+    queryKey: ["admin-dashboard-stats"],
+    queryFn: getAdminDashboardStats,
     staleTime: 60 * 1000,
     retry: 1,
   });

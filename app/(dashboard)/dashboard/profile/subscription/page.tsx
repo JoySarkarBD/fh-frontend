@@ -1,4 +1,5 @@
 import SubscriptionContent from "@/components/dashboard/subscription/SubscriptionContent";
+import BillingHistory from "@/components/dashboard/subscription/BillingHistory";
 
 export default function UserSubscriptionPage() {
   return (
@@ -13,9 +14,7 @@ export default function UserSubscriptionPage() {
         <h2 className='text-xl font-semibold mb-3 border-b-2 border-gray-300 pb-2'>
           Billing
         </h2>
-        <p className='text-[#70706C]'>
-          Billing history and payment method details will appear here.
-        </p>
+        <BillingHistory />
       </div>
     </div>
   );

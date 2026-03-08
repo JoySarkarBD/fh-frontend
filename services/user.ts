@@ -15,6 +15,15 @@ export type UsersResponse = {
     hasPrevPage: boolean;
   };
 };
+
+export type DashboardStatsResponse = {
+  totalUsers: number;
+  thisMonthUsers: number;
+  activeSubscribers: number;
+  totalRevenue: number;
+  pendingCommunication: number;
+  conversionRate: number;
+};
 interface ApiErrorResponse {
   message?: string;
   success?: boolean;
@@ -127,3 +136,31 @@ export const getUserById = async (id: string) => {
     );
   }
 };
+
+export const getAdminDashboardStats =
+  async (): Promise<DashboardStatsResponse> => {
+    try {
+      const axiosInstance = await getAxiosInstance();
+      const { data } = await axiosInstance.get<{
+        success: boolean;
+        data: DashboardStatsResponse;
+      }>("/users/admin/dashboard-stats");
+
+      if (!data.success || !data.data) {
+        throw new Error(
+          "Invalid response format from /users/admin/dashboard-stats",
+        );
+      }
+
+      return data.data;
+    } catch (err) {
+      const error = err as AxiosError<ApiErrorResponse>;
+
+      throw new Error(
+        error.response?.data?.message ||
+          (error.message === "Network Error"
+            ? "Request blocked. Check backend CORS origin settings."
+            : "Failed to load dashboard stats"),
+      );
+    }
+  };

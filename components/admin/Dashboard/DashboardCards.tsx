@@ -1,4 +1,7 @@
+"use client";
+
 import MiniCard from "@/components/shared/MiniCard/MiniCard";
+import { useAdminDashboardStats } from "@/actions/hooks/user.hooks";
 import { GiSandsOfTime } from "react-icons/gi";
 import {
   LuBadgePercent,
@@ -9,35 +12,45 @@ import {
 import { TbUserStar } from "react-icons/tb";
 
 export default function DashboardCards() {
+  const { data } = useAdminDashboardStats();
+
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency: "USD",
+      maximumFractionDigits: 0,
+    }).format(amount);
+  };
+
   const cardsData = [
     {
       icon: LuUsers,
-      title: "12478",
+      title: String(data?.totalUsers ?? 0),
       subTitle: "Total Users",
     },
     {
       icon: LuUser,
-      title: "567",
+      title: String(data?.thisMonthUsers ?? 0),
       subTitle: "This Month User",
     },
     {
       icon: TbUserStar,
-      title: "1248",
+      title: String(data?.activeSubscribers ?? 0),
       subTitle: "Active Subscribers",
     },
     {
       icon: LuCircleDollarSign,
-      title: "$169,564",
+      title: formatCurrency(data?.totalRevenue ?? 0),
       subTitle: "Total Revenue",
     },
     {
       icon: GiSandsOfTime,
-      title: "65",
+      title: String(data?.pendingCommunication ?? 0),
       subTitle: "Pending Communication",
     },
     {
       icon: LuBadgePercent,
-      title: "85.6%",
+      title: `${(data?.conversionRate ?? 0).toFixed(1)}%`,
       subTitle: "Conversion Rate",
     },
   ];
