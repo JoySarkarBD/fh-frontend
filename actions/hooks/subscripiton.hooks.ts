@@ -26,6 +26,8 @@ export const useSubscriptionMutations = () => {
       // Refetch subscriptions list
       queryClient.invalidateQueries({ queryKey: ["subscriptions"] });
       queryClient.invalidateQueries({ queryKey: ["subscription-history"] });
+      // Also refetch navbar user state for accurate subscription status
+      queryClient.invalidateQueries({ queryKey: ["user", "navbarState"] });
     },
 
     onError: (error) => {

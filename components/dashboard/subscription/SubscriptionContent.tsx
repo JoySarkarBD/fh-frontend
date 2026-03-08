@@ -67,7 +67,7 @@ export default function SubscriptionContent() {
   ];
 
   return (
-    <div className='md:pr-35'>
+    <div className='lg:pr-35'>
       <p className='flex md:hidden text-2xl mb-4 text-center items-center justify-center font-semibold text-(--primary)'>
         Subscription Plan
       </p>
