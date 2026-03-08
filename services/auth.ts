@@ -169,7 +169,7 @@ export async function getCurrentUserFromTokenAction(): Promise<AuthNavbarState> 
         ? "admin"
         : "user";
 
-    // Defensive: handle boolean or string 'true'/'false' from backend
+    // handle boolean or string 'true'/'false' from backend
     const isSubscribedRaw = response.data?.data?.isSubscribed;
     let isSubscribed: boolean;
     if (typeof isSubscribedRaw === "string") {

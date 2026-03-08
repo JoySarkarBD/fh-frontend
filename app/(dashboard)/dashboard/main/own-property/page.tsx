@@ -10,7 +10,7 @@ import { useState } from "react";
 const Page = () => {
   const [page, setPage] = useState(1);
 
-  const { data, isLoading, isError,refetch, error } = useUserOwnProperties({
+  const { data, isLoading, isError, error } = useUserOwnProperties({
     page,
     limit: 9,
   });
@@ -20,17 +20,21 @@ const Page = () => {
   const meta = data?.data?.meta;
 
   if (isError) {
-    return <p className="text-center py-10 text-red-500">{error?.message || "Failed to load properties"}</p>;
+    return (
+      <p className='text-center py-10 text-red-500'>
+        {error?.message || "Failed to load properties"}
+      </p>
+    );
   }
 
   return (
     <div>
       {/* Header */}
-      <div className="flex justify-between mb-5">
-        <h1 className="text-[36px]">Own Property</h1>
+      <div className='flex justify-between mb-5'>
+        <h1 className='text-[36px]'>Own Property</h1>
 
-        <Link href="/dashboard/main/add-property">
-          <button className="flex justify-center items-center text-white w-[154px] h-[36px] p-2 rounded-sm cursor-pointer bg-[#619B7F]">
+        <Link href='/dashboard/main/add-property'>
+          <button className='flex justify-center items-center text-white w-38.5 h-9 p-2 rounded-sm cursor-pointer bg-[#619B7F]'>
             <Plus size={16} /> Add Property
           </button>
         </Link>
@@ -38,19 +42,18 @@ const Page = () => {
 
       {/* Properties */}
       {isLoading ? (
-        <p className="text-center py-10">Loading properties...</p>
+        <p className='text-center py-10'>Loading properties...</p>
       ) : (
         <>
-                    {/* <button onClick={()=>{refetch()}}>Refetch</button> */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-
+          {/* <button onClick={()=>{refetch()}}>Refetch</button> */}
+          <div className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6'>
             {properties.map((p: any) => (
               <Card
                 key={p._id}
                 id={p._id}
                 imageUrl={p.thumbnail?.image ?? "/property.png"}
                 badge={p.status ?? "For Sale"}
-                title={p.propertyName} // <-- propertyName in your API
+                title={p.propertyName} 
                 subtitle={p.address ?? p.overview}
                 meta={[
                   { label: "Beds", value: p.bedrooms, icon: Bed },
@@ -62,8 +65,8 @@ const Page = () => {
                   },
                 ]}
                 price={p.price}
-                type="property"
-                primaryActionLabel="View Details"
+                type='property'
+                primaryActionLabel='View Details'
               />
             ))}
           </div>

@@ -1,10 +1,10 @@
 import {
   DashboardStatsResponse,
   getAdminDashboardStats,
-  getUserClient,
   UsersResponse,
 } from "@/services/user";
 import { getAllUsers } from "@/services/user";
+import axiosClient from "@/lib/axiosClient";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { getUserById } from "@/services/user";
 
@@ -16,7 +16,7 @@ import { getUserById } from "@/services/user";
 export const useGetUser = () => {
   return useQuery({
     queryKey: ["subscriptions", "users"],
-    queryFn: getUserClient,
+    queryFn: () => axiosClient.get("/users/me"),
     staleTime: 60 * 1000, // 1 min
   });
 };

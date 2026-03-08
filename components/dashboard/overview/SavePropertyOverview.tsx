@@ -19,7 +19,7 @@ export const SavePropertyOverview = () => {
               alt='Property'
               width={150}
               height={150}
-              className='object-cover w-[250px] md:w-[150px] rounded-md'
+              className='object-cover w-62.5 md:w-37.5 h-auto rounded-md'
             />
           </div>
           <div className='flex-1 mt-2 md:mt-0'>
@@ -47,7 +47,7 @@ export const SavePropertyOverview = () => {
           </div>
           <div className='flex flex-col mt-5 md:mt-0'>
             <span className='text-xl font-bold text-gray-900'>$1,649.99</span>
-            <button className='mt-2 w-[100px] md:w-full underline cursor-pointer'>
+            <button className='mt-2 w-25 md:w-full underline cursor-pointer'>
               View Details
             </button>
           </div>
@@ -60,7 +60,7 @@ export const SavePropertyOverview = () => {
             alt='Property'
             width={150}
             height={150}
-            className='object-cover w-[250px] md:w-[150px] rounded-md'
+            className='object-cover w-62.5 md:w-37.5 h-auto rounded-md'
           />
           <div className='flex-1'>
             <h3 className='text-lg font-semibold'>Modern Luxury Villa</h3>
@@ -87,7 +87,7 @@ export const SavePropertyOverview = () => {
           </div>
           <div className='flex flex-col mt-5 md:mt-0'>
             <span className='text-xl font-bold text-gray-900'>$1,649.99</span>
-            <button className='mt-2 underline cursor-pointer w-[100px] md:w-full'>
+            <button className='mt-2 underline cursor-pointer w-25 md:w-full'>
               View Details
             </button>
           </div>
@@ -100,7 +100,7 @@ export const SavePropertyOverview = () => {
             alt='Property'
             width={150}
             height={150}
-            className='object-cover w-[250px] md:w-[150px] rounded-md'
+            className='object-cover w-62.5 md:w-37.5 h-auto rounded-md'
           />
           <div className='flex-1 mt-2 md:mt-0'>
             <h3 className='text-lg font-semibold'>Modern Luxury Villa</h3>
