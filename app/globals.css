@@ -132,3 +132,14 @@ body {
   font-weight: 700;
   font-style: normal;
 }
+
+/* Quill size class support for details page */
+.ql-size-small {
+  font-size: 0.85em;
+}
+.ql-size-large {
+  font-size: 1.5em;
+}
+.ql-size-huge {
+  font-size: 2.2em;
+}

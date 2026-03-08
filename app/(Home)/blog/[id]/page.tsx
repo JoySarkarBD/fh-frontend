@@ -27,21 +27,21 @@ export default function BlogDetailsPage() {
     }
   }, []);
 
-  const stripHtml = (value: string): string => {
-    if (!value) return "";
-    if (typeof window === "undefined") {
-      return value
-        .replace(/<[^>]*>/g, " ")
-        .replace(/\s+/g, " ")
-        .trim();
-    }
+  // const stripHtml = (value: string): string => {
+  //   if (!value) return "";
+  //   if (typeof window === "undefined") {
+  //     return value
+  //       .replace(/<[^>]*>/g, " ")
+  //       .replace(/\s+/g, " ")
+  //       .trim();
+  //   }
 
-    const temp = document.createElement("div");
-    temp.innerHTML = value;
-    return (temp.textContent || temp.innerText || "")
-      .replace(/\s+/g, " ")
-      .trim();
-  };
+  //   const temp = document.createElement("div");
+  //   temp.innerHTML = value;
+  //   return (temp.textContent || temp.innerText || "")
+  //     .replace(/\s+/g, " ")
+  //     .trim();
+  // };
 
   const formatDate = (raw?: string): string => {
     if (!raw) return "";
@@ -116,9 +116,9 @@ export default function BlogDetailsPage() {
               {article.title}
             </h1>
 
-            <p className='text-sm text-gray-500 mb-5'>
+            {/* <p className='text-sm text-gray-500 mb-5'>
               {stripHtml(article.blogDetails)}
-            </p>
+            </p> */}
 
             <div
               className='prose max-w-none prose-p:leading-7 prose-h1:text-4xl prose-h2:text-3xl prose-h3:text-2xl prose-h4:text-xl prose-h5:text-lg prose-h6:text-base prose-ul:list-disc prose-ol:list-decimal prose-li:ml-6 prose-blockquote:border-l-4 prose-blockquote:pl-4 prose-blockquote:text-gray-600 prose-img:rounded-lg prose-img:mx-auto prose-table:w-full prose-table:my-4 prose-th:bg-gray-100 prose-th:p-2 prose-td:p-2 prose-code:bg-gray-100 prose-code:px-1 prose-code:rounded prose-pre:bg-gray-900 prose-pre:text-white prose-pre:p-4 prose-pre:rounded-lg prose-strong:font-semibold prose-em:italic prose-a:text-blue-600 prose-a:underline prose-a:break-all prose-p:mb-4 prose-p:text-base prose-p:text-gray-700'

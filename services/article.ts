@@ -5,7 +5,7 @@ import type { Iblog } from "@/types/blog";
 export type ArticleCategory =
   | "SELLING_TIPS"
   | "BUYING_GUIDE"
-  | "MARKET_ANALYSI";
+  | "MARKET_ANALYSIS";
 
 export interface ArticleImage {
   key?: string;
