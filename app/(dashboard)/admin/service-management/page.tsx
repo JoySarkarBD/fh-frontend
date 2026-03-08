@@ -8,7 +8,7 @@ import {
   useUpdateServiceMutation,
 } from "@/actions/hooks/service.hooks";
 import type { ICreateService, IServiceResponse } from "@/services/service";
-import { FiEdit3, FiTrash2, FiX } from "react-icons/fi";
+import { FiTrash2, FiX } from "react-icons/fi";
 
 const MAX_DESCRIPTION_POINTS = 4;
 
@@ -24,6 +24,8 @@ const ServiceModal = ({
   initialService,
   onSubmit,
   isSubmitting,
+  onDelete,
+  isDeleting,
 }: {
   isOpen: boolean;
   onClose: () => void;
@@ -31,6 +33,8 @@ const ServiceModal = ({
   initialService?: IServiceResponse | null;
   onSubmit: (payload: ICreateService) => Promise<void>;
   isSubmitting: boolean;
+  onDelete?: (service: IServiceResponse) => Promise<void>;
+  isDeleting?: boolean;
 }) => {
   const [serviceTitle, setServiceTitle] = useState(
     mode === "edit" && initialService ? (initialService.title ?? "") : "",
@@ -105,6 +109,18 @@ const ServiceModal = ({
     handleClose();
   };
 
+  const handleDelete = async () => {
+    if (!initialService || !onDelete) return;
+
+    const shouldDelete = window.confirm(
+      `Delete service "${initialService.title}"? This action cannot be undone.`,
+    );
+    if (!shouldDelete) return;
+
+    await onDelete(initialService);
+    handleClose();
+  };
+
   const handleClose = () => {
     setServiceTitle("");
     setSubTitle("");
@@ -121,11 +137,22 @@ const ServiceModal = ({
           <h2 className='text-2xl font-semibold text-gray-800'>
             {mode === "add" ? "Add" : "Edit"} Service
           </h2>
-          <button
-            onClick={handleClose}
-            className='text-gray-400 hover:text-gray-600'>
-            <FiX size={22} />
-          </button>
+          <div className='flex items-center gap-2'>
+            {mode === "edit" && onDelete && (
+              <button
+                onClick={() => void handleDelete()}
+                disabled={isDeleting}
+                className='flex items-center gap-1 px-3 py-1.5 text-sm border border-red-200 text-red-600 rounded-lg hover:bg-red-50 disabled:opacity-60'>
+                <FiTrash2 size={16} />
+                {isDeleting ? "Deleting..." : "Delete"}
+              </button>
+            )}
+            <button
+              onClick={handleClose}
+              className='text-gray-400 hover:text-gray-600'>
+              <FiX size={22} />
+            </button>
+          </div>
         </div>
 
         <div className='px-6 py-5 space-y-5'>
@@ -259,11 +286,6 @@ const Page = () => {
       return;
     }
 
-    const shouldDelete = window.confirm(
-      `Delete service \"${service.title}\"? This action cannot be undone.`,
-    );
-    if (!shouldDelete) return;
-
     await deleteServiceMutation.mutateAsync(id);
   };
 
@@ -304,26 +326,11 @@ const Page = () => {
           <div className='grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-6'>
             {services.map((service) => (
               <div
+                onClick={() => openEditModal(service)}
                 key={service._id || service.id}
-                className='border border-gray-300 rounded-lg p-6 mb-1 flex flex-col h-full'>
+                className='border border-gray-300 rounded-lg p-6 mb-1 flex flex-col h-full cursor-pointer hover:border-[#5F8E7E] transition-colors'>
                 <div className='flex items-start justify-between gap-2 mb-2'>
                   <h3 className='text-xl font-semibold'>{service.title}</h3>
-                  <div className='flex items-center gap-2'>
-                    <button
-                      onClick={() => openEditModal(service)}
-                      className='flex items-center gap-1 px-3 py-1.5 text-sm border border-[#D1CEC6] rounded-lg hover:bg-[#f7f7f5]'>
-                      <FiEdit3 size={16} />
-                    </button>
-                    <button
-                      onClick={() => void handleDelete(service)}
-                      disabled={deleteServiceMutation.isPending}
-                      className='flex items-center gap-1 px-3 py-1.5 text-sm border border-red-200 text-red-600 rounded-lg hover:bg-red-50 disabled:opacity-60'>
-                      <FiTrash2 size={16} />
-                      {deleteServiceMutation.isPending
-                        ? "Deleting..."
-                        : ""}
-                    </button>
-                  </div>
                 </div>
 
                 <p className='text-gray-700 mb-4'>{service.subTitle}</p>
@@ -347,6 +354,8 @@ const Page = () => {
           initialService={selectedService}
           onSubmit={handleSubmit}
           isSubmitting={isSubmitting}
+          onDelete={modalMode === "edit" ? handleDelete : undefined}
+          isDeleting={deleteServiceMutation.isPending}
         />
       )}
     </div>

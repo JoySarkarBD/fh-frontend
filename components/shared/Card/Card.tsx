@@ -21,10 +21,11 @@ type BaseProps = {
   primaryActionLabel?: string;
   children?: ReactNode; // for custom content
   className?: string;
+  onClick?: () => void;
 };
 
 export type PropertyCardProps = BaseProps & {
-  type: "property" | 'own-property';
+  type: "property" | "own-property";
   meta?: MetaItem[];
   price?: string | number;
   date?: undefined | string;
@@ -72,9 +73,8 @@ const Card: React.FC<CardProps> = (props) => {
         router.push(`/properties/${id}`);
       } else if (type === "blog") {
         router.push(`/blog/${id}`);
-      }
-     else if(type === 'own-property'){
-   router.push(`/dashboard/main/own-property/update/${id}`);
+      } else if (type === "own-property") {
+        router.push(`/dashboard/main/own-property/update/${id}`);
       }
     }
   };
@@ -158,9 +158,19 @@ const Card: React.FC<CardProps> = (props) => {
               )}
             </div>
 
-            {(onPrimaryAction || id) && (
+            {/* {(onPrimaryAction || id) && (
               <button
                 onClick={handlePrimaryAction}
+                className='text-sm underline cursor-pointer'>
+                {primaryActionLabel}
+              </button>
+            )} */}
+            {(onPrimaryAction || id) && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation(); // stop event from bubbling to parent
+                  handlePrimaryAction();
+                }}
                 className='text-sm underline cursor-pointer'>
                 {primaryActionLabel}
               </button>
