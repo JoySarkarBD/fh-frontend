@@ -15,7 +15,7 @@ import Card from "@/components/shared/Card/Card";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { FiEdit3, FiTrash2, FiX } from "react-icons/fi";
+import { FiTrash2, FiX } from "react-icons/fi";
 
 const UploadCloud = () => (
   <svg
@@ -49,8 +49,8 @@ type QuillConstructor = new (
 const CATEGORY_OPTIONS: Array<{ value: ArticleCategory; label: string }> = [
   { value: "SELLING_TIPS", label: "Selling Tips" },
   { value: "BUYING_GUIDE", label: "Buying Guide" },
-  // Keep backend enum value as-is. Schema currently defines MARKET_ANALYSI.
-  { value: "MARKET_ANALYSI", label: "Market Analysis" },
+  // Keep backend enum value as-is. Schema currently defines MARKET_ANALYSIS.
+  { value: "MARKET_ANALYSIS", label: "Market Analysis" },
 ];
 
 const formatDateForInput = (raw?: string): string => {
@@ -89,6 +89,8 @@ const BlogModal = ({
   initialArticle,
   onSubmit,
   isSubmitting,
+  onDelete,
+  isDeleting,
 }: {
   isOpen: boolean;
   onClose: () => void;
@@ -102,6 +104,8 @@ const BlogModal = ({
     image?: File;
   }) => Promise<void>;
   isSubmitting: boolean;
+  onDelete?: (article: IArticleResponse) => Promise<void>;
+  isDeleting?: boolean;
 }) => {
   const [blogTitle, setBlogTitle] = useState(
     mode === "edit" && initialArticle ? initialArticle.title : "",
@@ -172,18 +176,10 @@ const BlogModal = ({
                 placeholder: "Enter blog details",
                 modules: {
                   toolbar: [
-                    [{ font: [] }],
                     [{ size: ["small", false, "large", "huge"] }],
                     ["bold", "italic", "underline", "strike"],
                     ["blockquote", "code-block"],
-                    ["link", "image"],
-                    [{ list: "ordered" }, { list: "bullet" }],
-                    [{ script: "sub" }, { script: "super" }],
-                    [{ indent: "-1" }, { indent: "+1" }],
-                    [{ direction: "rtl" }],
                     [{ color: [] }, { background: [] }],
-                    [{ align: [] }],
-                    [{ header: [1, 2, 3, 4, 5, 6, false] }],
                     ["clean"],
                   ],
                 },
@@ -255,6 +251,18 @@ const BlogModal = ({
     if (file) setPreviewImage(file);
   };
 
+  const handleDelete = async () => {
+    if (!initialArticle || !onDelete) return;
+
+    const shouldDelete = window.confirm(
+      `Delete article "${initialArticle.title}"? This action cannot be undone.`,
+    );
+    if (!shouldDelete) return;
+
+    await onDelete(initialArticle);
+    handleClose();
+  };
+
   const handleClose = () => {
     setBlogTitle("");
     setCategory("");
@@ -312,11 +320,22 @@ const BlogModal = ({
             <h2 className='text-2xl font-semibold text-gray-800'>
               {mode === "add" ? "Add" : "Edit"} Blog
             </h2>
-            <button
-              onClick={handleClose}
-              className='text-gray-400 hover:text-gray-600'>
-              <FiX size={22} />
-            </button>
+            <div className='flex items-center gap-2'>
+              {mode === "edit" && onDelete && (
+                <button
+                  onClick={() => void handleDelete()}
+                  disabled={isDeleting}
+                  className='flex items-center gap-1 px-3 py-1.5 text-sm border border-red-200 text-red-600 rounded-lg hover:bg-red-50 disabled:opacity-60'>
+                  <FiTrash2 size={16} />
+                  {isDeleting ? "Deleting..." : "Delete"}
+                </button>
+              )}
+              <button
+                onClick={handleClose}
+                className='text-gray-400 hover:text-gray-600'>
+                <FiX size={22} />
+              </button>
+            </div>
           </div>
 
           <div className='px-6 py-5 space-y-5'>
@@ -526,11 +545,6 @@ export default function Page() {
       return;
     }
 
-    const shouldDelete = window.confirm(
-      `Delete article \"${article.title}\"? This action cannot be undone.`,
-    );
-    if (!shouldDelete) return;
-
     await deleteArticleMutation.mutateAsync(id);
   };
 
@@ -582,38 +596,31 @@ export default function Page() {
           (articles.length === 0 ? (
             <div className='text-center py-8 text-gray-500'>No Articles</div>
           ) : (
-            <div className='grid grid-cols-1 md:grid-cols-2 gap-6 justify-between lg:grid-cols-4'>
+            <div className='grid grid-cols-1 md:grid-cols-2 gap-6 justify-between lg:grid-cols-4 items-stretch'>
               {articles.map((article) => {
                 const blog = articleToBlog(article);
                 const articleId = article._id || article.id;
 
                 return (
-                  <Card
+                  <div
                     key={articleId}
-                    id={articleId}
-                    imageUrl={blog.image || "/blog.jpg"}
-                    badge={blog.category}
-                    title={blog.title}
-                    subtitle={stripHtml(blog.blogDetails || blog.description)}
-                    type='blog'
-                    date={blog.date || "No date"}
-                    primaryActionLabel='View Details'
-                    onPrimaryAction={() => handleViewDetails(article)}>
-                    <div className='mt-auto flex items-center gap-2 mb-2'>
-                      <button
-                        onClick={() => openEditModal(article)}
-                        className='flex items-center gap-1 px-3 py-1.5 text-sm border border-[#D1CEC6] rounded-lg hover:bg-[#f7f7f5]'>
-                        <FiEdit3 size={16} />
-                      </button>
-                      <button
-                        onClick={() => void handleDelete(article)}
-                        disabled={deleteArticleMutation.isPending}
-                        className='flex items-center gap-1 px-3 py-1.5 text-sm border border-red-200 text-red-600 rounded-lg hover:bg-red-50 disabled:opacity-60'>
-                        <FiTrash2 size={16} />
-                        {deleteArticleMutation.isPending ? "Deleting..." : ""}
-                      </button>
-                    </div>
-                  </Card>
+                    onClick={() => openEditModal(article)}
+                    className='cursor-pointer h-full '>
+                    <Card
+                      id={articleId}
+                      imageUrl={blog.image || "/blog.jpg"}
+                      badge={blog.category}
+                      title={blog.title}
+                      subtitle={stripHtml(blog.blogDetails || blog.description)}
+                      type='blog'
+                      date={blog.date || "No date"}
+                      primaryActionLabel='View Details'
+                      onPrimaryAction={() => {
+                        handleViewDetails(article);
+                      }}
+                      className='min-h-105 flex flex-col h-full'
+                    />
+                  </div>
                 );
               })}
             </div>
@@ -628,6 +635,8 @@ export default function Page() {
           initialArticle={selectedArticle}
           onSubmit={handleSubmit}
           isSubmitting={isSubmitting}
+          onDelete={modalMode === "edit" ? handleDelete : undefined}
+          isDeleting={deleteArticleMutation.isPending}
         />
       )}
     </div>
