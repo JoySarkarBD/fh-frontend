@@ -100,6 +100,7 @@ export const useLoginMutation = (
       // Invalidate and refetch user queries
       queryClient.invalidateQueries({ queryKey: authKeys.navbarState });
       queryClient.invalidateQueries({ queryKey: authKeys.profile });
+      queryClient.removeQueries({ queryKey: ["maintenances"] });
 
       // Call the original onSuccess if provided
       if (options?.onSuccess) {
@@ -148,6 +149,7 @@ export const useLogoutMutation = (
       // Clear all user related queries
       queryClient.removeQueries({ queryKey: authKeys.navbarState });
       queryClient.removeQueries({ queryKey: authKeys.profile });
+      queryClient.removeQueries({ queryKey: ["maintenances"] });
 
       // Also invalidate to trigger refetch if needed
       queryClient.invalidateQueries({ queryKey: authKeys.all });
