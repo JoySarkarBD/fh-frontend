@@ -4,6 +4,7 @@ import axiosClient from "@/lib/axiosClient";
 import {
   checkPropertySaved,
   createProperty,
+  getSavedPropertyOverview,
   getSavedProperties,
   getPropertyById,
   ICreateProperty,
@@ -13,6 +14,7 @@ import {
   PaginatedPropertiesResponse,
   PropertyStatus,
   removeSavedPropertyById,
+  SavedPropertyOverviewResponse,
   savePropertyById,
 } from "@/services/property";
 import { getAllProperties, getOwnProperties } from "@/services/property.server";
@@ -81,6 +83,7 @@ export const propertyKeys = {
     [...propertyKeys.savedLists(), params ?? {}] as const,
   savedStatus: (propertyId: string) =>
     [...propertyKeys.all, "saved-status", propertyId] as const,
+  overview: () => [...propertyKeys.all, "overview"] as const,
 };
 
 // ============================================================================
@@ -392,6 +395,10 @@ export const useSavePropertyMutation = (
       await queryClient.invalidateQueries({
         queryKey: propertyKeys.savedStatus(propertyId),
       });
+      await queryClient.invalidateQueries({
+        queryKey: propertyKeys.overview(),
+        refetchType: "all",
+      });
       if (options?.onSuccess)
         options.onSuccess(data, propertyId, context, mutation);
     },
@@ -417,6 +424,10 @@ export const useUnsavePropertyMutation = (
       await queryClient.invalidateQueries({
         queryKey: propertyKeys.savedStatus(propertyId),
       });
+      await queryClient.invalidateQueries({
+        queryKey: propertyKeys.overview(),
+        refetchType: "all",
+      });
       if (options?.onSuccess)
         options.onSuccess(data, propertyId, context, mutation);
     },
@@ -426,3 +437,18 @@ export const useUnsavePropertyMutation = (
     ...options,
   });
 };
+
+export const useSavedPropertyOverview = (
+  options?: Omit<
+    UseQueryOptions<ApiResponse<SavedPropertyOverviewResponse>>,
+    "queryKey" | "queryFn"
+  >,
+) =>
+  useQuery<ApiResponse<SavedPropertyOverviewResponse>>({
+    queryKey: propertyKeys.overview(),
+    queryFn: getSavedPropertyOverview,
+    staleTime: 1000 * 30,
+    refetchOnMount: "always",
+    refetchOnWindowFocus: true,
+    ...options,
+  });

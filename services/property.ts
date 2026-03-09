@@ -92,6 +92,18 @@ export interface PaginatedSavedPropertiesResponse {
   data: ISavedPropertyItem[];
   meta: Meta;
 }
+
+export interface SavedPropertyOverviewResponse {
+  stats: {
+    ownCount: number;
+    buyCount: number;
+    sellCount: number;
+    rentCount: number;
+    savedCount: number;
+    sellingPostCount: number;
+  };
+  recentSaved: ISavedPropertyItem[];
+}
 export interface ApiResponse<T> {
   success: boolean;
   message: string;
@@ -408,6 +420,24 @@ export const checkPropertySaved = async (
       axiosError.response?.data?.message ||
         axiosError.message ||
         "Failed to check saved property.",
+    );
+  }
+};
+
+export const getSavedPropertyOverview = async (): Promise<
+  ApiResponse<SavedPropertyOverviewResponse>
+> => {
+  try {
+    const response = await axiosClient.get<ApiResponse<SavedPropertyOverviewResponse>>(
+      "/save-property/overview",
+    );
+    return response.data;
+  } catch (error) {
+    const axiosError = error as AxiosError<ApiErrorResponse>;
+    throw new Error(
+      axiosError.response?.data?.message ||
+        axiosError.message ||
+        "Failed to fetch overview data.",
     );
   }
 };
