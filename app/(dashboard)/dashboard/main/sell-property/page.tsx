@@ -2,6 +2,7 @@
 
 import { useUserOwnProperties } from "@/actions/hooks/property.hooks";
 import Card from "@/components/shared/Card/Card";
+import { IPropertyResponse } from "@/services/property";
 import { Bath, Bed, Square } from "lucide-react";
 
 const Page = () => {
@@ -20,7 +21,7 @@ const Page = () => {
 
       <div>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-             {properties.map((p: any) => (
+             {properties.map((p: IPropertyResponse) => (
               <Card
                 key={p._id}
                 id={p._id}
@@ -39,7 +40,7 @@ const Page = () => {
                 ]}
                 price={p.price}
                 type="own-property"
-           primaryActionLabel={p.isPublished ? "View Details" : "Post Now"} // Use IsPosted instead of isPublished
+           primaryActionLabel={p.isPublished ? "View Details" : "Post For Sale"} // Use IsPosted instead of isPublished
               />
             ))}
         </div>

@@ -1,5 +1,6 @@
 "use client";
 
+import { useAdminDashboardStats } from "@/actions/hooks/user.hooks";
 import { useState, useEffect } from "react";
 import {
   BarChart,
@@ -12,6 +13,7 @@ import {
 
 export default function DashboardLeftGraph() {
   const [isMobile, setIsMobile] = useState(false);
+  const { data: stats, isLoading } = useAdminDashboardStats();
 
   useEffect(() => {
     const checkMobile = () => setIsMobile(window.innerWidth < 768);
@@ -20,26 +22,19 @@ export default function DashboardLeftGraph() {
     return () => window.removeEventListener("resize", checkMobile);
   }, []);
 
-  const barValue = [
-    { month: "Jan", revenue: 4000 },
-    { month: "Feb", revenue: 3200 },
-    { month: "Mar", revenue: 1100 },
-    { month: "Apr", revenue: 3500 },
-    { month: "May", revenue: 2800 },
-    { month: "Jun", revenue: 1200 },
-    { month: "Jul", revenue: 4100 },
-    { month: "Aug", revenue: 3800 },
-    { month: "Sep", revenue: 4300 },
-    { month: "Oct", revenue: 1200 },
-    { month: "Nov", revenue: 4900 },
-    { month: "Dec", revenue: 3100 },
-  ];
+  const barValue = stats?.revenueTrend ?? [];
+  const maxRevenue = Math.max(1000, ...barValue.map((row) => row.revenue || 0));
 
   return (
     <div>
       <p className='text-xl md:text-2xl border-b border-[#D1CEC6] pb-3 mb-4'>
         Revenue Trend
       </p>
+      {isLoading ? (
+        <div className='w-full h-70 md:h-80 lg:h-186 flex items-center justify-center'>
+          <span className='text-[#70706C] text-lg'>Loading revenue trend...</span>
+        </div>
+      ) : (
       <div className='w-full h-70 md:h-80 lg:h-186 -ml-5 md:ml-0'>
         <ResponsiveContainer width='100%' height='100%'>
           <BarChart
@@ -59,7 +54,7 @@ export default function DashboardLeftGraph() {
             <YAxis
               tick={{ fill: "#70706C", fontSize: isMobile ? 10 : 15 }}
               axisLine={{ stroke: "#FFFFFF" }}
-              domain={[0, 6000]}
+              domain={[0, Math.ceil(maxRevenue * 1.2)]}
               label={
                 isMobile
                   ? undefined
@@ -99,6 +94,7 @@ export default function DashboardLeftGraph() {
           </BarChart>
         </ResponsiveContainer>
       </div>
+      )}
     </div>
   );
 }

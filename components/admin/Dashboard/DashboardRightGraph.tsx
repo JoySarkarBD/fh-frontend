@@ -26,35 +26,21 @@ export default function DashboardRightGraph() {
     return () => window.removeEventListener("resize", checkMobile);
   }, []);
 
-  const sellingData = [
-    { month: "Jan", sales: 1100 },
-    { month: "Feb", sales: 1500 },
-    { month: "Mar", sales: 1700 },
-    { month: "Apr", sales: 2900 },
-    { month: "May", sales: 2400 },
-    { month: "Jun", sales: 2700 },
-    { month: "Jul", sales: 4100 },
-    { month: "Aug", sales: 3800 },
-    { month: "Sep", sales: 4300 },
-    { month: "Oct", sales: 5200 },
-    { month: "Nov", sales: 3900 },
-    { month: "Dec", sales: 4100 },
-  ];
-
   const { data: stats, isLoading: statsLoading } = useAdminDashboardStats();
+  const sellingData = stats?.sellingOverview ?? [];
+  const maxSales = Math.max(10, ...sellingData.map((row) => row.sales || 0));
   const userDistributionData = useMemo(() => {
     if (!stats) {
       return [
-        { name: "Free", value: 0, color: "#D1E3D9" },
-        { name: "Premium", value: 0, color: "#619B7F" },
+        { name: "Unsubscribed", value: 0, color: "#D1E3D9" },
+        { name: "Subscribed", value: 0, color: "#619B7F" },
       ];
     }
-    const premium = stats.activeSubscribers ?? 0;
-    const total = stats.totalUsers ?? 0;
-    const free = Math.max(total - premium, 0);
+    const subscribed = stats.userDistribution?.subscribed ?? 0;
+    const unsubscribed = stats.userDistribution?.unsubscribed ?? 0;
     return [
-      { name: "Free", value: free, color: "#D1E3D9" },
-      { name: "Premium", value: premium, color: "#619B7F" },
+      { name: "Unsubscribed", value: unsubscribed, color: "#D1E3D9" },
+      { name: "Subscribed", value: subscribed, color: "#619B7F" },
     ];
   }, [stats]);
 
@@ -148,7 +134,7 @@ export default function DashboardRightGraph() {
               <YAxis
                 tick={{ fill: "#000000", fontSize: isMobile ? 10 : 15 }}
                 axisLine={{ stroke: "#FFFFFF" }}
-                domain={[0, 6000]}
+                domain={[0, Math.ceil(maxSales * 1.2)]}
               />
               <Tooltip
                 contentStyle={{
@@ -159,8 +145,8 @@ export default function DashboardRightGraph() {
                   boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
                 }}
                 formatter={(value: unknown) => [
-                  `$${typeof value === "number" ? value.toLocaleString() : 0}`,
-                  "Monthly Sales",
+                  typeof value === "number" ? value.toLocaleString() : 0,
+                  "Monthly Listings",
                 ]}
                 labelStyle={{ color: "#304C3E", fontWeight: "bold" }}
                 itemStyle={{ color: "#619B7F", fontWeight: "500" }}

@@ -81,6 +81,29 @@ export interface PaginatedPropertiesResponse {
   data: IPropertyResponse[]; // the array of properties
   meta: Meta; // pagination info
 }
+
+export interface ISavedPropertyItem {
+  id: string;
+  property: IPropertyResponse;
+  savedAt: string;
+}
+
+export interface PaginatedSavedPropertiesResponse {
+  data: ISavedPropertyItem[];
+  meta: Meta;
+}
+
+export interface SavedPropertyOverviewResponse {
+  stats: {
+    ownCount: number;
+    buyCount: number;
+    sellCount: number;
+    rentCount: number;
+    savedCount: number;
+    sellingPostCount: number;
+  };
+  recentSaved: ISavedPropertyItem[];
+}
 export interface ApiResponse<T> {
   success: boolean;
   message: string;
@@ -324,6 +347,97 @@ export const deleteProperty = async (
       axiosError.response?.data?.message ||
         axiosError.message ||
         "Failed to delete property.",
+    );
+  }
+};
+
+export const getSavedProperties = async (params?: {
+  page?: number;
+  limit?: number;
+}): Promise<ApiResponse<PaginatedSavedPropertiesResponse>> => {
+  try {
+    const response = await axiosClient.get<
+      ApiResponse<PaginatedSavedPropertiesResponse>
+    >("/save-property/me", { params });
+    return response.data;
+  } catch (error) {
+    const axiosError = error as AxiosError<ApiErrorResponse>;
+    throw new Error(
+      axiosError.response?.data?.message ||
+        axiosError.message ||
+        "Failed to fetch saved properties.",
+    );
+  }
+};
+
+export const savePropertyById = async (
+  propertyId: string,
+): Promise<ApiResponse<unknown>> => {
+  try {
+    const response = await axiosClient.post<ApiResponse<unknown>>(
+      `/save-property/${propertyId}`,
+    );
+    return response.data;
+  } catch (error) {
+    const axiosError = error as AxiosError<ApiErrorResponse>;
+    throw new Error(
+      axiosError.response?.data?.message ||
+        axiosError.message ||
+        "Failed to save property.",
+    );
+  }
+};
+
+export const removeSavedPropertyById = async (
+  propertyId: string,
+): Promise<ApiResponse<unknown>> => {
+  try {
+    const response = await axiosClient.delete<ApiResponse<unknown>>(
+      `/save-property/${propertyId}`,
+    );
+    return response.data;
+  } catch (error) {
+    const axiosError = error as AxiosError<ApiErrorResponse>;
+    throw new Error(
+      axiosError.response?.data?.message ||
+        axiosError.message ||
+        "Failed to remove saved property.",
+    );
+  }
+};
+
+export const checkPropertySaved = async (
+  propertyId: string,
+): Promise<ApiResponse<{ isSaved: boolean }>> => {
+  try {
+    const response = await axiosClient.get<ApiResponse<{ isSaved: boolean }>>(
+      `/save-property/check/${propertyId}`,
+    );
+    return response.data;
+  } catch (error) {
+    const axiosError = error as AxiosError<ApiErrorResponse>;
+    throw new Error(
+      axiosError.response?.data?.message ||
+        axiosError.message ||
+        "Failed to check saved property.",
+    );
+  }
+};
+
+export const getSavedPropertyOverview = async (): Promise<
+  ApiResponse<SavedPropertyOverviewResponse>
+> => {
+  try {
+    const response = await axiosClient.get<ApiResponse<SavedPropertyOverviewResponse>>(
+      "/save-property/overview",
+    );
+    return response.data;
+  } catch (error) {
+    const axiosError = error as AxiosError<ApiErrorResponse>;
+    throw new Error(
+      axiosError.response?.data?.message ||
+        axiosError.message ||
+        "Failed to fetch overview data.",
     );
   }
 };
