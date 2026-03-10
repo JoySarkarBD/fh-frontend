@@ -9,6 +9,7 @@ import type { ApiResponse } from "@/lib/api";
 import {
   getChatConversations,
   getChatMessages,
+  sendChatMessage,
   createChatConversation,
   markChatSeen,
   uploadChatFiles,
@@ -91,7 +92,7 @@ export const useChatMessages = (
 export const useCreateConversationMutation = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (payload: { participantIds: string[]; propertyId: string }) =>
+    mutationFn: (payload: { participantIds: string[]; propertyId?: string }) =>
       createChatConversation(payload),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: chatKeys.conversations() });
@@ -99,20 +100,13 @@ export const useCreateConversationMutation = () => {
   });
 };
 
-/**
- * Stub — messages are sent via Socket.IO (`sendMessage` event).
- * Exists so page.tsx compiles; never actually called in practice.
- */
 export const useSendChatMessageMutation = () => {
   return useMutation({
-    mutationFn: async (_payload: {
+    mutationFn: (payload: {
       conversationId: string;
       message?: string;
       attachments?: ChatAttachment[];
-    }) => {
-      // Socket path is used in page.tsx — this REST stub is never reached.
-      throw new Error("Use Socket.IO sendMessage event instead");
-    },
+    }) => sendChatMessage(payload),
   });
 };
 

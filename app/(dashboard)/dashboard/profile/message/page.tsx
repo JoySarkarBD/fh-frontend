@@ -269,24 +269,7 @@ export default function UserMessagePage() {
       queryClient.setQueryData<InfiniteData<ApiResponse<PaginatedChatMessages>>>(
         chatKeys.messages(message.conversationId),
         (previous) => {
-          // If cache is empty (recipient hasn't loaded messages yet),
-          // bootstrap an initial page so the message appears immediately.
-          if (!previous) {
-            return {
-              pages: [
-                {
-                  success: true,
-                  message: "ok",
-                  data: {
-                    messages: [message],
-                    nextCursor: null,
-                    count: 1,
-                  },
-                } as ApiResponse<PaginatedChatMessages>,
-              ],
-              pageParams: [undefined],
-            };
-          }
+          if (!previous) return previous;
           const firstPage = previous.pages[0];
           if (!firstPage) return previous;
           // Deduplicate: skip if message already exists in any page
@@ -546,27 +529,11 @@ export default function UserMessagePage() {
   }, [myUserId, queryClient, resolvedActiveConversationId]);
 
   useEffect(() => {
-    const socket = socketRef.current ?? getChatSocket();
-    socketRef.current = socket;
-    if (!resolvedActiveConversationId) return;
+    const socket = socketRef.current;
+    if (!socket || !resolvedActiveConversationId) return;
 
-    const joinRoom = () => {
-      socket.emit("joinConversation", { conversationId: resolvedActiveConversationId });
-      socket.emit("markSeen", { conversationId: resolvedActiveConversationId });
-    };
-
-    // Join immediately if already connected, otherwise the 'connect' listener
-    // below will fire once the handshake completes.
-    if (socket.connected) {
-      joinRoom();
-    }
-
-    // Re-join on every (re)connect so room membership survives socket restarts.
-    socket.on("connect", joinRoom);
-
-    return () => {
-      socket.off("connect", joinRoom);
-    };
+    socket.emit("joinConversation", { conversationId: resolvedActiveConversationId });
+    socket.emit("markSeen", { conversationId: resolvedActiveConversationId });
   }, [resolvedActiveConversationId]);
 
   const otherParticipant = getOtherParticipant(activeConversation, myUserId);
@@ -786,7 +753,7 @@ export default function UserMessagePage() {
                               ? "bg-[#64A081] text-white"
                               : "bg-[#DEE2E0] text-[#232323]"
                           }`}>
-                          {item.isUnsent ? (
+                          {item.unsentForEveryone ? (
                             <p className='text-sm italic opacity-80'>
                               This message was unsent
                             </p>
@@ -827,7 +794,7 @@ export default function UserMessagePage() {
                                   ))}
                                 </div>
                               ) : null}
-                              {item.isForwarded ? (
+                              {item.forwardedFrom ? (
                                 <p className='mt-1 text-xs opacity-80'>Forwarded</p>
                               ) : null}
                             </>
@@ -870,7 +837,7 @@ export default function UserMessagePage() {
                                   <Trash2 size={12} />
                                   Delete for me
                                 </button>
-                                {isMine && !item.isUnsent ? (
+                                {isMine && !item.unsentForEveryone ? (
                                   <button
                                     type='button'
                                     onClick={() => {
@@ -898,14 +865,12 @@ export default function UserMessagePage() {
                 <div className='flex items-center gap-3'>
                   <div className='h-14 w-20 overflow-hidden rounded-md bg-[#E2E4E3]'>
                     {activeConversation.property.thumbnail?.image ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
+                      <Image
                         src={activeConversation.property.thumbnail.image}
                         alt={activeConversation.property.propertyName ?? "Property"}
+                        width={80}
+                        height={56}
                         className='h-full w-full object-cover'
-                        onError={(e) => {
-                          (e.currentTarget as HTMLImageElement).style.display = "none";
-                        }}
                       />
                     ) : (
                       <div className='flex h-full w-full items-center justify-center text-[#8A8A86]'>
