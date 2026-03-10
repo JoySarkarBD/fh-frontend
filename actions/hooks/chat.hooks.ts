@@ -9,20 +9,16 @@ import type { ApiResponse } from "@/lib/api";
 import {
   getChatConversations,
   getChatMessages,
-  sendChatMessage,
   createChatConversation,
   markChatSeen,
   uploadChatFiles,
   type ChatAttachment,
-  type ChatConversation,
-  type ChatMessage,
   type PaginatedChatMessages,
   type PaginatedChatConversations,
 } from "@/services/chat";
 import {
   useInfiniteQuery,
   useMutation,
-  useQuery,
   useQueryClient,
   type InfiniteData,
 } from "@tanstack/react-query";
@@ -64,7 +60,10 @@ export const useChatConversations = () => {
 
 // ─── MESSAGES (cursor-paginated) ─────────────────────────────────────────────
 
-export const useChatMessages = (conversationId: string | null) => {
+export const useChatMessages = (
+  conversationId: string | null,
+  options?: { enabled?: boolean },
+) => {
   return useInfiniteQuery<
     ApiResponse<PaginatedChatMessages>,
     Error,
@@ -82,7 +81,7 @@ export const useChatMessages = (conversationId: string | null) => {
     initialPageParam: undefined,
     getNextPageParam: (lastPage) =>
       lastPage.data?.nextCursor ?? undefined,
-    enabled: Boolean(conversationId),
+    enabled: options?.enabled ?? Boolean(conversationId),
     staleTime: 1000 * 30,
   });
 };
@@ -92,7 +91,7 @@ export const useChatMessages = (conversationId: string | null) => {
 export const useCreateConversationMutation = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (payload: { participantIds: string[]; propertyId?: string }) =>
+    mutationFn: (payload: { participantIds: string[]; propertyId: string }) =>
       createChatConversation(payload),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: chatKeys.conversations() });
@@ -100,13 +99,20 @@ export const useCreateConversationMutation = () => {
   });
 };
 
+/**
+ * Stub — messages are sent via Socket.IO (`sendMessage` event).
+ * Exists so page.tsx compiles; never actually called in practice.
+ */
 export const useSendChatMessageMutation = () => {
   return useMutation({
-    mutationFn: (payload: {
+    mutationFn: async (_payload: {
       conversationId: string;
       message?: string;
       attachments?: ChatAttachment[];
-    }) => sendChatMessage(payload),
+    }) => {
+      // Socket path is used in page.tsx — this REST stub is never reached.
+      throw new Error("Use Socket.IO sendMessage event instead");
+    },
   });
 };
 

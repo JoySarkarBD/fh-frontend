@@ -14,7 +14,7 @@ import {
 } from "@/actions/hooks/chat.hooks";
 import { useUserProfile } from "@/actions/hooks/auth.hooks";
 import { getChatSocket } from "@/lib/chatSocket";
-import type { ChatConversation, ChatMessage, PaginatedChatMessages, ChatAttachment } from "@/services/chat";
+import type { ChatConversation, ChatMessage, PaginatedChatMessages, PaginatedChatConversations, ChatAttachment } from "@/services/chat";
 import type { ApiResponse } from "@/lib/api";
 import {
   FileText,
@@ -38,7 +38,7 @@ import {
   useCallback,
   type ChangeEvent,
 } from "react";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQueryClient, type InfiniteData } from "@tanstack/react-query";
 import type { Socket } from "socket.io-client";
 
 const formatTimeAgo = (iso?: string | null) => {
@@ -256,7 +256,7 @@ export default function UserMessagePage() {
     enabled: Boolean(resolvedActiveConversationId),
   });
 
-  const messages = messagesResponse?.data?.messages ?? [];
+  const messages = messagesResponse?.pages.flatMap((page) => page.data?.messages ?? []) ?? [];
 
   useEffect(() => {
     if (!myUserId) return;
@@ -266,37 +266,71 @@ export default function UserMessagePage() {
     socketRef.current = socket;
 
     const handleMessageReceived = (message: ChatMessage) => {
-      queryClient.setQueryData<ApiResponse<PaginatedChatMessages>>(
+      queryClient.setQueryData<InfiniteData<ApiResponse<PaginatedChatMessages>>>(
         chatKeys.messages(message.conversationId),
         (previous) => {
-          if (!previous) return previous;
-          const exists = previous.data.messages.some((m) => m._id === message._id);
+          // If cache is empty (recipient hasn't loaded messages yet),
+          // bootstrap an initial page so the message appears immediately.
+          if (!previous) {
+            return {
+              pages: [
+                {
+                  success: true,
+                  message: "ok",
+                  data: {
+                    messages: [message],
+                    nextCursor: null,
+                    count: 1,
+                  },
+                } as ApiResponse<PaginatedChatMessages>,
+              ],
+              pageParams: [undefined],
+            };
+          }
+          const firstPage = previous.pages[0];
+          if (!firstPage) return previous;
+          // Deduplicate: skip if message already exists in any page
+          const exists = previous.pages.some((p) =>
+            p.data?.messages.some((m) => m._id === message._id),
+          );
           if (exists) return previous;
           return {
             ...previous,
-            data: {
-              ...previous.data,
-              messages: [message, ...previous.data.messages],
-              count: previous.data.count + 1,
-            },
+            pages: [
+              {
+                ...firstPage,
+                data: {
+                  ...firstPage.data,
+                  messages: [message, ...(firstPage.data?.messages ?? [])],
+                  count: (firstPage.data?.count ?? 0) + 1,
+                  nextCursor: firstPage.data?.nextCursor ?? null,
+                },
+              },
+              ...previous.pages.slice(1),
+            ],
           };
         },
       );
     };
 
     const handleMessageUpdated = (message: ChatMessage) => {
-      queryClient.setQueryData<ApiResponse<PaginatedChatMessages>>(
+      queryClient.setQueryData<InfiniteData<ApiResponse<PaginatedChatMessages>>>(
         chatKeys.messages(message.conversationId),
         (previous) => {
           if (!previous) return previous;
           return {
             ...previous,
-            data: {
-              ...previous.data,
-              messages: previous.data.messages.map((m) =>
-                m._id === message._id ? { ...m, ...message } : m,
-              ),
-            },
+            pages: previous.pages.map((page) => ({
+              ...page,
+              data: page.data
+                ? {
+                    ...page.data,
+                    messages: page.data.messages.map((m) =>
+                      m._id === message._id ? { ...m, ...message } : m,
+                    ),
+                  }
+                : page.data,
+            })),
           };
         },
       );
@@ -306,18 +340,23 @@ export default function UserMessagePage() {
       messageId: string;
       conversationId: string;
     }) => {
-      queryClient.setQueryData<ApiResponse<PaginatedChatMessages>>(
+      queryClient.setQueryData<InfiniteData<ApiResponse<PaginatedChatMessages>>>(
         chatKeys.messages(payload.conversationId),
         (previous) => {
           if (!previous) return previous;
           return {
             ...previous,
-            data: {
-              ...previous.data,
-              messages: previous.data.messages.filter(
-                (m) => m._id !== payload.messageId,
-              ),
-            },
+            pages: previous.pages.map((page) => ({
+              ...page,
+              data: page.data
+                ? {
+                    ...page.data,
+                    messages: page.data.messages.filter(
+                      (m) => m._id !== payload.messageId,
+                    ),
+                  }
+                : page.data,
+            })),
           };
         },
       );
@@ -328,20 +367,25 @@ export default function UserMessagePage() {
       conversationId: string;
       userId: string;
     }) => {
-      queryClient.setQueryData<ApiResponse<PaginatedChatMessages>>(
+      queryClient.setQueryData<InfiniteData<ApiResponse<PaginatedChatMessages>>>(
         chatKeys.messages(payload.conversationId),
         (previous) => {
           if (!previous) return previous;
           return {
             ...previous,
-            data: {
-              ...previous.data,
-              messages: previous.data.messages.map((m) =>
-                m._id === payload.messageId
-                  ? { ...m, unsentForEveryone: true, message: "", attachments: [] }
-                  : m,
-              ),
-            },
+            pages: previous.pages.map((page) => ({
+              ...page,
+              data: page.data
+                ? {
+                    ...page.data,
+                    messages: page.data.messages.map((m) =>
+                      m._id === payload.messageId
+                        ? { ...m, unsentForEveryone: true, message: "", attachments: [] }
+                        : m,
+                    ),
+                  }
+                : page.data,
+            })),
           };
         },
       );
@@ -353,18 +397,33 @@ export default function UserMessagePage() {
     }) => {
       if (payload.userId !== myUserId) return;
 
-      queryClient.setQueryData<ApiResponse<ChatConversation[]>>(
+      queryClient.setQueryData<InfiniteData<ApiResponse<PaginatedChatConversations>>>(
         chatKeys.conversations(),
         (previous) => {
           if (!previous) return previous;
-          const next = [...previous.data];
-          const index = next.findIndex((c) => c._id === payload.conversation._id);
-          if (index >= 0) {
-            next[index] = payload.conversation;
-          } else {
-            next.unshift(payload.conversation);
-          }
-          return { ...previous, data: sortConversations(next) };
+          const firstPage = previous.pages[0];
+          if (!firstPage) return previous;
+          const convs = firstPage.data?.conversations ?? [];
+          const index = convs.findIndex((c) => c._id === payload.conversation._id);
+          const updated =
+            index >= 0
+              ? convs.map((c, i) => (i === index ? payload.conversation : c))
+              : [payload.conversation, ...convs];
+          return {
+            ...previous,
+            pages: [
+              {
+                ...firstPage,
+                data: {
+                  ...firstPage.data,
+                  conversations: sortConversations(updated),
+                  nextCursor: firstPage.data?.nextCursor ?? null,
+                  hasMore: firstPage.data?.hasMore ?? false,
+                },
+              },
+              ...previous.pages.slice(1),
+            ],
+          };
         },
       );
     };
@@ -374,23 +433,33 @@ export default function UserMessagePage() {
       isOnline: boolean;
       lastActiveAt: string | null;
     }) => {
-      queryClient.setQueryData<ApiResponse<ChatConversation[]>>(
+      queryClient.setQueryData<InfiniteData<ApiResponse<PaginatedChatConversations>>>(
         chatKeys.conversations(),
         (previous) => {
           if (!previous) return previous;
-          const updated = previous.data.map((conversation) => ({
-            ...conversation,
-            participants: conversation.participants.map((participant) =>
-              participant._id === payload.userId
+          return {
+            ...previous,
+            pages: previous.pages.map((page) => ({
+              ...page,
+              data: page.data
                 ? {
-                    ...participant,
-                    isOnline: payload.isOnline,
-                    lastActiveAt: payload.lastActiveAt,
+                    ...page.data,
+                    conversations: page.data.conversations.map((conversation) => ({
+                      ...conversation,
+                      participants: conversation.participants.map((participant) =>
+                        participant._id === payload.userId
+                          ? {
+                              ...participant,
+                              isOnline: payload.isOnline,
+                              lastActiveAt: payload.lastActiveAt,
+                            }
+                          : participant,
+                      ),
+                    })),
                   }
-                : participant,
-            ),
-          }));
-          return { ...previous, data: updated };
+                : page.data,
+            })),
+          };
         },
       );
     };
@@ -401,20 +470,25 @@ export default function UserMessagePage() {
     }) => {
       if (!payload.conversationId || payload.seenBy === myUserId) return;
 
-      queryClient.setQueryData<ApiResponse<PaginatedChatMessages>>(
+      queryClient.setQueryData<InfiniteData<ApiResponse<PaginatedChatMessages>>>(
         chatKeys.messages(payload.conversationId),
         (previous) => {
           if (!previous) return previous;
           return {
             ...previous,
-            data: {
-              ...previous.data,
-              messages: previous.data.messages.map((message) =>
-                message.senderId === myUserId
-                  ? { ...message, status: "seen" }
-                  : message,
-              ),
-            },
+            pages: previous.pages.map((page) => ({
+              ...page,
+              data: page.data
+                ? {
+                    ...page.data,
+                    messages: page.data.messages.map((message) =>
+                      message.senderId === myUserId
+                        ? { ...message, status: "seen" as const }
+                        : message,
+                    ),
+                  }
+                : page.data,
+            })),
           };
         },
       );
@@ -472,11 +546,27 @@ export default function UserMessagePage() {
   }, [myUserId, queryClient, resolvedActiveConversationId]);
 
   useEffect(() => {
-    const socket = socketRef.current;
-    if (!socket || !resolvedActiveConversationId) return;
+    const socket = socketRef.current ?? getChatSocket();
+    socketRef.current = socket;
+    if (!resolvedActiveConversationId) return;
 
-    socket.emit("joinConversation", { conversationId: resolvedActiveConversationId });
-    socket.emit("markSeen", { conversationId: resolvedActiveConversationId });
+    const joinRoom = () => {
+      socket.emit("joinConversation", { conversationId: resolvedActiveConversationId });
+      socket.emit("markSeen", { conversationId: resolvedActiveConversationId });
+    };
+
+    // Join immediately if already connected, otherwise the 'connect' listener
+    // below will fire once the handshake completes.
+    if (socket.connected) {
+      joinRoom();
+    }
+
+    // Re-join on every (re)connect so room membership survives socket restarts.
+    socket.on("connect", joinRoom);
+
+    return () => {
+      socket.off("connect", joinRoom);
+    };
   }, [resolvedActiveConversationId]);
 
   const otherParticipant = getOtherParticipant(activeConversation, myUserId);
@@ -509,20 +599,17 @@ export default function UserMessagePage() {
           message: trimmed,
           attachments: attachmentObjects,
         });
+        setMessageText("");
+        setSelectedFiles([]);
+        void refetchMessages();
       } else {
-        await sendMessageMutation.mutateAsync({
-          conversationId: resolvedActiveConversationId,
-          message: trimmed,
-          attachments: attachmentObjects,
-        });
+        // Socket is not yet connected — inform the user instead of
+        // calling the non-existent REST fallback.
+        alert("Chat is not connected yet. Please wait a moment and try again.");
       }
-
-      setMessageText("");
-      setSelectedFiles([]);
-      void refetchMessages();
     } catch (error) {
       console.error("Failed to send message/upload file", error);
-      alert("Failed to send your message. Please check your connection and try again.");
+      alert("Failed to upload the attachment. Please try again.");
     }
   };
 
@@ -699,7 +786,7 @@ export default function UserMessagePage() {
                               ? "bg-[#64A081] text-white"
                               : "bg-[#DEE2E0] text-[#232323]"
                           }`}>
-                          {item.unsentForEveryone ? (
+                          {item.isUnsent ? (
                             <p className='text-sm italic opacity-80'>
                               This message was unsent
                             </p>
@@ -740,7 +827,7 @@ export default function UserMessagePage() {
                                   ))}
                                 </div>
                               ) : null}
-                              {item.forwardedFrom ? (
+                              {item.isForwarded ? (
                                 <p className='mt-1 text-xs opacity-80'>Forwarded</p>
                               ) : null}
                             </>
@@ -783,7 +870,7 @@ export default function UserMessagePage() {
                                   <Trash2 size={12} />
                                   Delete for me
                                 </button>
-                                {isMine && !item.unsentForEveryone ? (
+                                {isMine && !item.isUnsent ? (
                                   <button
                                     type='button'
                                     onClick={() => {
@@ -811,12 +898,14 @@ export default function UserMessagePage() {
                 <div className='flex items-center gap-3'>
                   <div className='h-14 w-20 overflow-hidden rounded-md bg-[#E2E4E3]'>
                     {activeConversation.property.thumbnail?.image ? (
-                      <Image
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
                         src={activeConversation.property.thumbnail.image}
                         alt={activeConversation.property.propertyName ?? "Property"}
-                        width={80}
-                        height={56}
                         className='h-full w-full object-cover'
+                        onError={(e) => {
+                          (e.currentTarget as HTMLImageElement).style.display = "none";
+                        }}
                       />
                     ) : (
                       <div className='flex h-full w-full items-center justify-center text-[#8A8A86]'>

@@ -39,6 +39,16 @@ export type ChatAttachment = {
   createdAt: string;
 };
 
+/**
+ * Mirrors backend `MessagePayload` and `Message` schema exactly.
+ *
+ * Key field corrections from previous version:
+ *   - `isUnsent`          (was `unsentForEveryone`) — matches Message.isUnsent
+ *   - `isForwarded`       (was `forwardedFrom`)     — matches MessagePayload.isForwarded
+ *   - `forwardedBy`       added                     — matches MessagePayload.forwardedBy
+ *   - `originalMessageId` added                     — matches MessagePayload.originalMessageId
+ *   - `deletedForUsers`   (was `deletedFor`)        — matches Message.deletedForUsers
+ */
 export type ChatMessage = {
   _id: string;
   conversationId: string;
@@ -46,9 +56,16 @@ export type ChatMessage = {
   message: string;
   attachments: ChatAttachment[];
   status: "sent" | "delivered" | "seen";
-  unsentForEveryone: boolean;
-  forwardedFrom?: string | null;
-  deletedFor?: string[];
+  /** True when the sender has unsent (recalled) this message. */
+  isUnsent: boolean;
+  /** True when this message was forwarded from another conversation. */
+  isForwarded?: boolean;
+  /** ObjectId string of the original message (if forwarded). */
+  originalMessageId?: string | null;
+  /** UserId of the person who forwarded the message. */
+  forwardedBy?: string | null;
+  /** User IDs for whom this message is hidden (delete-for-me). */
+  deletedForUsers?: string[];
   sender?: ChatParticipant;
   createdAt: string;
 };
@@ -78,7 +95,7 @@ export const getChatConversations = async (params?: {
 
 export const createChatConversation = async (payload: {
   participantIds: string[];
-  propertyId?: string;
+  propertyId: string;
 }): Promise<ApiResponse<ChatConversation>> => {
   const res = await axiosClient.post<ApiResponse<ChatConversation>>(
     "/chat/conversations",
@@ -99,28 +116,17 @@ export const getChatMessages = async (params: {
   return res.data;
 };
 
-export const sendChatMessage = async (payload: {
-  conversationId: string;
-  message?: string;
-  attachments?: ChatAttachment[];
-}): Promise<ApiResponse<ChatMessage>> => {
-  const res = await axiosClient.post<ApiResponse<ChatMessage>>(
-    "/chat/messages",
-    payload,
-  );
-  return res.data;
-};
-
-
-
+/**
+ * Mark messages seen — handled exclusively via Socket.IO (`markSeen` event).
+ * This stub exists so `useMarkChatSeenMutation` compiles; it is never called
+ * in practice since `page.tsx` always uses the socket path when connected.
+ * The REST endpoint `PATCH /chat/messages/seen` does not exist on the backend.
+ */
 export const markChatSeen = async (
-  conversationId: string,
+  _conversationId: string,
 ): Promise<ApiResponse<{ modifiedCount: number }>> => {
-  const res = await axiosClient.patch<ApiResponse<{ modifiedCount: number }>>(
-    "/chat/messages/seen",
-    { conversationId },
-  );
-  return res.data;
+  // No-op: seen is sent via socket.emit("markSeen") — see page.tsx
+  return { success: true, message: "ok", data: { modifiedCount: 0 } };
 };
 
 export const uploadChatFiles = async (
