@@ -1,6 +1,6 @@
 "use client";
 import Image from "next/image";
-import React, { useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { FaCamera } from "react-icons/fa6";
 import {
   FiEdit2,
@@ -25,7 +25,11 @@ type ProfilePageProps = {
 
 const ProfilePage: React.FC<ProfilePageProps> = ({ initialProfile }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [profileImage, setProfileImage] = useState<string | null>(null);
+  const [selectedProfileImageFile, setSelectedProfileImageFile] =
+    useState<File | null>(null);
+  const [profileImagePreview, setProfileImagePreview] = useState<string | null>(
+    null,
+  );
 
   // TanStack Query hooks
   const { data: profileData } = useUserProfile({
@@ -35,6 +39,11 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ initialProfile }) => {
   const updateProfileMutation = useUpdateProfileMutation({
     onSuccess: () => {
       setIsEditing(false);
+      setSelectedProfileImageFile(null);
+      setProfileImagePreview(null);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
     },
   });
 
@@ -98,13 +107,28 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ initialProfile }) => {
     profileData?.officePhone,
   ]);
 
+  useEffect(() => {
+    return () => {
+      if (profileImagePreview && profileImagePreview.startsWith("blob:")) {
+        URL.revokeObjectURL(profileImagePreview);
+      }
+    };
+  }, [profileImagePreview]);
+
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!isEditing) return;
+
     const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = (ev) => setProfileImage(ev.target?.result as string);
-      reader.readAsDataURL(file);
+    if (!file) return;
+
+    if (profileImagePreview && profileImagePreview.startsWith("blob:")) {
+      URL.revokeObjectURL(profileImagePreview);
     }
+
+    const previewUrl = URL.createObjectURL(file);
+    setSelectedProfileImageFile(file);
+    setProfileImagePreview(previewUrl);
+    setAddError("");
   };
 
   // Edit profile (name + phone)
@@ -143,6 +167,11 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ initialProfile }) => {
     setEditInstagram(profileData?.instagramLink ?? "");
     setEditTwitter(profileData?.twitterLink ?? "");
     setEditLinkedin(profileData?.linkedinLink ?? "");
+    setSelectedProfileImageFile(null);
+    setProfileImagePreview(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
     setAddError("");
   };
 
@@ -152,6 +181,9 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ initialProfile }) => {
       updateProfileMutation.mutate({
         name: editName,
         phone: editPhone,
+        ...(selectedProfileImageFile
+          ? { profileImage: selectedProfileImageFile }
+          : {}),
         ...(isAdmin
           ? {
               facebookLink: editFacebook,
@@ -196,6 +228,9 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ initialProfile }) => {
 
   const isLoading =
     updateProfileMutation.isPending || addAddressMutation.isPending;
+  const isProfileSaving = updateProfileMutation.isPending;
+  const hasProfileImage = Boolean((profileData?.profileImage ?? "").trim());
+  const avatarText = (profileData?.name ?? "U").trim().charAt(0).toUpperCase();
 
   if (!profileData) {
     return (
@@ -228,7 +263,7 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ initialProfile }) => {
                   onClick={saveProfile}
                   disabled={isLoading}
                   className='flex items-center gap-1.5 text-sm font-medium px-4 py-2 rounded bg-[#619B7F] text-white disabled:opacity-50'>
-                  Save
+                  {isProfileSaving ? "Saving..." : "Save"}
                 </button>
                 <button
                   onClick={cancelEdit}
@@ -245,30 +280,41 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ initialProfile }) => {
             {/* Avatar */}
             <div className='mb-5'>
               <div
-                onClick={() => fileInputRef.current?.click()}
-                className='w-34 h-34 rounded-full overflow-hidden border-2 border-[#D1CEC6] cursor-pointer mb-1.5'>
+                onClick={() => {
+                  if (isEditing) fileInputRef.current?.click();
+                }}
+                className={`w-34 h-34 rounded-full overflow-hidden border-2 border-[#D1CEC6] mb-1.5 ${
+                  isEditing ? "cursor-pointer" : "cursor-default"
+                }`}>
                 <div className='relative w-full h-full'>
-                  {profileImage ? (
+                  {profileImagePreview ? (
                     <Image
-                      src={profileImage}
+                      src={profileImagePreview}
                       alt={profileData?.name ?? "Profile"}
                       width={400}
                       height={400}
                       unoptimized
                       className='w-full h-full object-cover'
                     />
-                  ) : (
+                  ) : hasProfileImage ? (
                     <Image
-                      src={profileData?.profileImage ?? "/user.png"}
+                      src={profileData?.profileImage as string}
                       alt={profileData?.name ?? "Profile"}
                       width={500}
                       height={500}
+                      unoptimized
                       className='w-full h-full object-cover'
                     />
+                  ) : (
+                    <div className='w-full h-full flex items-center justify-center bg-[#e8f0ec] text-[#3d6b4a] text-4xl font-semibold'>
+                      {avatarText || "U"}
+                    </div>
                   )}
-                  <div className='absolute bottom-0 right-0 bg-white rounded-full p-1 border border-[#D1CEC6]'>
-                    <FaCamera size={12} />
-                  </div>
+                  {isEditing && (
+                    <div className='absolute bottom-0 right-0 bg-white rounded-full p-1 border border-[#D1CEC6]'>
+                      <FaCamera size={12} />
+                    </div>
+                  )}
                 </div>
               </div>
               <input
@@ -278,11 +324,14 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ initialProfile }) => {
                 className='hidden'
                 onChange={handleImageChange}
               />
-              <button
-                onClick={() => fileInputRef.current?.click()}
-                className='text-black text-xl font-medium hover:underline'>
-                Change Photo
-              </button>
+              {isEditing && (
+                <button
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={isLoading}
+                  className='text-black text-xl font-medium hover:underline'>
+                  Change Photo
+                </button>
+              )}
             </div>
 
             {/* Fields Grid */}
