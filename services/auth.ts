@@ -287,6 +287,33 @@ export async function updateProfileAction(payload: UpdateProfilePayload) {
 }
 
 /**
+ * Changes the user's password by sending the current password, new password, and confirm new password to the backend. Validates that the new password and confirm new password match before making the API call.
+ */
+export type ChangePasswordPayload = {
+  currentPassword: string;
+  newPassword: string;
+  confirmNewPassword: string;
+};
+
+export async function changePasswordAction(payload: ChangePasswordPayload) {
+  try {
+    const axiosInstance = await getAxiosInstance();
+    const response = await axiosInstance.patch<ApiResponse<unknown>>(
+      "/auth/change-password",
+      payload,
+    );
+    return response.data;
+  } catch (error) {
+    const axiosError = error as AxiosError<ApiErrorResponse>;
+    throw new Error(
+      axiosError.response?.data?.message ||
+        axiosError.message ||
+        "Failed to change password.",
+    );
+  }
+}
+
+/**
  * Logs out the current user by deleting the access token cookie.
  */
 export async function logoutAction() {
