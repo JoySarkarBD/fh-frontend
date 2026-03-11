@@ -162,7 +162,7 @@ export async function getCurrentUserFromTokenAction(): Promise<AuthNavbarState> 
     const response =
       await axiosInstance.get<ApiResponse<CurrentUserData>>("/users/me");
 
-    console.log("Current user fetched:", response.data);
+    // console.log("Current user fetched:", response.data);
 
     const normalizedRole =
       String(response.data.data?.role ?? "user").toLowerCase() === "admin"
