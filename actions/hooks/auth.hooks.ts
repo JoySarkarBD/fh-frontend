@@ -1,14 +1,12 @@
 // actions/hooks/auth.hooks.ts
 import type { ApiResponse } from "@/lib/api";
+import axiosClient from "@/lib/axiosClient";
 import {
-  addAddressAction,
   getCurrentUserFromTokenAction,
-  getUserProfileAction,
   loginAction,
   LoginData,
   logoutAction,
   registerAction,
-  updateProfileAction,
   type AddAddressPayload,
   type AuthNavbarState,
   type LoginPayload,
@@ -16,6 +14,7 @@ import {
   type UpdateProfilePayload,
 } from "@/services/auth";
 import type { UserProfile } from "@/types/user";
+import { AxiosError } from "axios";
 import {
   useMutation,
   UseMutationOptions,
@@ -23,6 +22,102 @@ import {
   useQueryClient,
   UseQueryOptions,
 } from "@tanstack/react-query";
+
+type ApiErrorResponse = {
+  message?: string;
+};
+
+const getUserProfileClient = async (): Promise<UserProfile | null> => {
+  try {
+    const response =
+      await axiosClient.get<ApiResponse<UserProfile>>("/users/me");
+    return response.data.data ?? null;
+  } catch {
+    return null;
+  }
+};
+
+const addAddressClient = async (
+  payload: AddAddressPayload,
+): Promise<ApiResponse<UserProfile>> => {
+  const body =
+    payload.type === "home"
+      ? {
+          homeAddress: payload.address?.trim() || "",
+          homePhone: payload.phone?.trim() || "",
+        }
+      : {
+          officeAddress: payload.address?.trim() || "",
+          officePhone: payload.phone?.trim() || "",
+        };
+
+  try {
+    const response = await axiosClient.patch<ApiResponse<UserProfile>>(
+      "/users/me",
+      body,
+    );
+    return response.data;
+  } catch (error) {
+    const axiosError = error as AxiosError<ApiErrorResponse>;
+    throw new Error(
+      axiosError.response?.data?.message ||
+        axiosError.message ||
+        "Failed to update address",
+    );
+  }
+};
+
+const updateProfileClient = async (
+  payload: UpdateProfilePayload,
+): Promise<ApiResponse<UserProfile>> => {
+  const profileImageFile = payload.profileImage;
+  const hasProfileImageFile = profileImageFile instanceof File;
+
+  try {
+    if (hasProfileImageFile) {
+      const formData = new FormData();
+      if (typeof payload.name === "string")
+        formData.append("name", payload.name);
+      if (typeof payload.phone === "string")
+        formData.append("phone", payload.phone);
+      if (typeof payload.facebookLink === "string")
+        formData.append("facebookLink", payload.facebookLink);
+      if (typeof payload.instagramLink === "string")
+        formData.append("instagramLink", payload.instagramLink);
+      if (typeof payload.twitterLink === "string")
+        formData.append("twitterLink", payload.twitterLink);
+      if (typeof payload.linkedinLink === "string")
+        formData.append("linkedinLink", payload.linkedinLink);
+      formData.append("profileImage", profileImageFile);
+
+      const response = await axiosClient.patch<ApiResponse<UserProfile>>(
+        "/users/me",
+        formData,
+        {
+          headers: {
+            "Content-Type": "multipart/form-data",
+          },
+        },
+      );
+
+      return response.data;
+    }
+
+    const response = await axiosClient.patch<ApiResponse<UserProfile>>(
+      "/users/me",
+      payload,
+    );
+
+    return response.data;
+  } catch (error) {
+    const axiosError = error as AxiosError<ApiErrorResponse>;
+    throw new Error(
+      axiosError.response?.data?.message ||
+        axiosError.message ||
+        "Failed to update profile",
+    );
+  }
+};
 
 // Query Keys
 export const authKeys = {
@@ -72,7 +167,7 @@ export const useUserProfile = (
 ) => {
   return useQuery<UserProfile | null>({
     queryKey: authKeys.profile,
-    queryFn: getUserProfileAction,
+    queryFn: getUserProfileClient,
     staleTime: 1000 * 30, // reduce to 30 seconds (or 0 for always stale)
     gcTime: 1000 * 60 * 5, // garbage collection after 5 min
     retry: false,
@@ -197,7 +292,7 @@ export const useUpdateProfileMutation = (
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: updateProfileAction,
+    mutationFn: updateProfileClient,
 
     onMutate: async (
       variables: UpdateProfilePayload,
@@ -209,7 +304,8 @@ export const useUpdateProfileMutation = (
 
       queryClient.setQueryData<UserProfile | null>(authKeys.profile, (old) => {
         if (!old) return old;
-        return { ...old, ...variables };
+        const { profileImage, ...rest } = variables;
+        return { ...old, ...rest };
       });
 
       return { previousProfile };
@@ -251,7 +347,7 @@ export const useAddAddressMutation = (
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: addAddressAction,
+    mutationFn: addAddressClient,
 
     onMutate: async (
       variables: AddAddressPayload,
