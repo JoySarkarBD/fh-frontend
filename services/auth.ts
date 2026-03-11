@@ -162,7 +162,7 @@ export async function getCurrentUserFromTokenAction(): Promise<AuthNavbarState> 
     const response =
       await axiosInstance.get<ApiResponse<CurrentUserData>>("/users/me");
 
-    console.log("Current user fetched:", response.data);
+    // console.log("Current user fetched:", response.data);
 
     const normalizedRole =
       String(response.data.data?.role ?? "user").toLowerCase() === "admin"
@@ -177,7 +177,7 @@ export async function getCurrentUserFromTokenAction(): Promise<AuthNavbarState> 
     } else {
       isSubscribed = Boolean(isSubscribedRaw);
     }
-    console.log(response.data?.data, "logged subscribed");
+    // console.log(response.data?.data, "logged subscribed");
 
     return {
       isLoggedIn: true,
@@ -282,6 +282,33 @@ export async function updateProfileAction(payload: UpdateProfilePayload) {
       axiosError.response?.data?.message ||
         axiosError.message ||
         "Failed to update profile",
+    );
+  }
+}
+
+/**
+ * Changes the user's password by sending the current password, new password, and confirm new password to the backend. Validates that the new password and confirm new password match before making the API call.
+ */
+export type ChangePasswordPayload = {
+  currentPassword: string;
+  newPassword: string;
+  confirmNewPassword: string;
+};
+
+export async function changePasswordAction(payload: ChangePasswordPayload) {
+  try {
+    const axiosInstance = await getAxiosInstance();
+    const response = await axiosInstance.patch<ApiResponse<unknown>>(
+      "/auth/change-password",
+      payload,
+    );
+    return response.data;
+  } catch (error) {
+    const axiosError = error as AxiosError<ApiErrorResponse>;
+    throw new Error(
+      axiosError.response?.data?.message ||
+        axiosError.message ||
+        "Failed to change password.",
     );
   }
 }

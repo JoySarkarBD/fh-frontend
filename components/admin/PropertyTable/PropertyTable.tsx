@@ -2,7 +2,8 @@
 
 import Pagination from "@/components/pagination/Pagination";
 import Image from "next/image";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { Search } from "lucide-react";
 import { Loader2 } from "lucide-react";
 import { useGetAllPropertiesAdmin } from "@/actions/hooks/property.hooks";
 import PropertyDetailsModal from "./PropertyDetailsModal";
@@ -12,9 +13,21 @@ const PER_PAGE = 13;
 export default function PropertyTable() {
   const [currentPage, setCurrentPage] = useState(1);
   const [modalPropertyId, setModalPropertyId] = useState<string | null>(null);
+  const [searchInput, setSearchInput] = useState("");
+  const [searchTerm, setSearchTerm] = useState("");
+
+  // Debounce search input like user management (search on typing only)
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      const normalized = searchInput.trim();
+      setSearchTerm(normalized);
+      setCurrentPage(1);
+    }, 250);
+    return () => clearTimeout(timer);
+  }, [searchInput]);
 
   const { data, isLoading, isFetching, isError, error } =
-    useGetAllPropertiesAdmin(currentPage, PER_PAGE);
+    useGetAllPropertiesAdmin(currentPage, PER_PAGE, searchTerm);
 
   const properties = data?.properties ?? [];
   const meta = data?.meta;
@@ -83,11 +96,28 @@ export default function PropertyTable() {
 
   return (
     <div className='bg-white rounded-xl border border-[#D1CEC6]'>
-      {/* Page title */}
-      <div className='px-6 py-5'>
-        <h1 className='text-xl md:text-2xl  border-b border-[#D1CEC6] pb-3 '>
+      {/* Page title + Search */}
+      <div className='px-6 py-5 border-b border-[#D1CEC6] flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4'>
+        <h1 className='text-xl md:text-2xl font-semibold text-gray-800'>
           Property Management
         </h1>
+        {/* Search input only, no button */}
+        <div className='relative w-full sm:w-72'>
+          <Search className='absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none' />
+          <input
+            type='text'
+            placeholder='Search by name or address...'
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
+            className='
+              w-full pl-10 pr-4 py-2.5
+              border border-[#D1CEC6] rounded-lg
+              text-sm text-gray-700 placeholder-gray-400
+              focus:outline-none focus:border-[#619B7F] focus:ring-2 focus:ring-[#619B7F]/20
+              transition-all duration-200
+            '
+          />
+        </div>
       </div>
 
       {/* Table */}
@@ -225,15 +255,3 @@ export default function PropertyTable() {
     </div>
   );
 }
-
-// import React from 'react';
-
-// const PropertyTable = () => {
-//   return (
-//     <div>
-//           <h1>  The previous code is commented out in this modal component, so don’t worry.</h1>
-//     </div>
-//   );
-// };
-
-// export default PropertyTable;
