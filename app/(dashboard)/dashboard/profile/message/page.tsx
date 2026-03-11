@@ -724,7 +724,7 @@ const isImageFile = (file: File) => file.type.startsWith("image/");
             </div>
           </div>
 
-          <div className='flex-1 overflow-y-auto px-1 py-4'>
+          <div className='flex-1 overflow-y-auto max-h-[66vh] px-1 py-4'>
             {conversationsQueryError ? (
               <p className='px-3 text-sm text-red-500'>
                 Failed to load conversations.
@@ -817,7 +817,7 @@ const isImageFile = (file: File) => file.type.startsWith("image/");
                               <MoreVertical size={14} />
                             </button>
                             {openMessageMenuId === item._id ? (
-                              <div className='absolute right-0 top-6 z-20 min-w-36 rounded-md border border-[#D1CEC6] bg-white p-1 text-[#222] shadow-md'>
+                              <div className={`absolute  top-6 z-20 min-w-36 rounded-md border border-[#D1CEC6] bg-white p-1 text-[#222] shadow-md ${isMine ? 'right-0' : '-right-24 '}`}>
                                 <button
                                   type='button'
                                   onClick={() => {

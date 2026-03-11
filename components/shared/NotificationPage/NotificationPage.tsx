@@ -2,6 +2,8 @@
 
 
 import { useNotificationSettings, useToggleNotificationSettingMutation } from "@/actions/hooks/notificaton-settings.hooks";
+import { changePasswordAction, logoutAction } from "@/services/auth";
+import { useRouter } from "next/navigation";
 import { startTransition, useEffect, useState } from "react";
 import { FiEdit3, FiEye, FiEyeOff, FiLock } from "react-icons/fi";
 
@@ -84,8 +86,13 @@ export default function NotificationPage() {
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [isEditing, setIsEditing] = useState(false);
+  // const [notifType, setNotifType] = useState<"email" | "push">("email");
 
+  const [loading, setLoading] = useState(false);
+  const [successMsg, setSuccessMsg] = useState("");
+  const [errorMsg, setErrorMsg] = useState("");
 
+  const router = useRouter();
   // Sync backend data with local state (using _id as key)
 
 useEffect(() => {
@@ -108,6 +115,44 @@ useEffect(() => {
 
 
   // Handlers
+
+    const handlePasswordChange = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSuccessMsg("");
+    setErrorMsg("");
+
+    if (!currentPassword || !newPassword || !confirmPassword) {
+      setErrorMsg("All password fields are required.");
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      setErrorMsg("New password and confirm password do not match.");
+      return;
+    }
+    if (newPassword.length < 6) {
+      setErrorMsg("New password must be at least 6 characters.");
+      return;
+    }
+    setLoading(true);
+    try {
+      await changePasswordAction({
+        currentPassword,
+        newPassword,
+        confirmNewPassword: confirmPassword,
+      });
+      // Log out and redirect to login with notification
+      await logoutAction();
+      router.push("/login?passwordChanged=1");
+    } catch (err) {
+      if (err instanceof Error) {
+        setErrorMsg(err.message || "Failed to update password.");
+      } else {
+        setErrorMsg("Failed to update password.");
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
 
 
   const toggleCheck = async (id: string) => {
@@ -246,18 +291,15 @@ useEffect(() => {
       </div>
 
       {/* ── Security Settings ── */}
+  {/* ── Security Settings ── */}
       <div
         id='security'
         className='flex items-center justify-between mt-10 mb-4 flex-wrap gap-2'>
         <h2 className='text-4xl mb-6'>Security Settings</h2>
-        {!isEditing && (
-          <button 
-            onClick={() => setIsEditing(true)}
-            className='flex items-center gap-1.5 bg-[#4a7c5c] hover:bg-[#3a6347] text-white text-[16px] px-4 py-2 rounded-md transition-colors'>
-            <FiEdit3 size={15} />
-            Edit
-          </button>
-        )}
+        <button className='flex items-center gap-1.5 bg-[#4a7c5c] hover:bg-[#3a6347] text-white text-[16px] px-4 py-2 rounded-md transition-colors'>
+          <FiEdit3 size={15} />
+          Edit
+        </button>
       </div>
 
       {/* Auth Card */}
@@ -265,55 +307,59 @@ useEffect(() => {
         <h3 className='text-2xl mb-5 border-b border-[#D1CEC6] pb-2'>
           Authentication &amp; Access Control
         </h3>
-
-        {isEditing ? (
-          <>
+        <form onSubmit={handlePasswordChange}>
+          <PasswordField
+            label='Change Password'
+            placeholder='Enter current password'
+            value={currentPassword}
+            onChange={setCurrentPassword}
+            show={showCurrent}
+            onToggle={() => setShowCurrent((v) => !v)}
+          />
+          <PasswordField
+            label='New Password'
+            placeholder='Enter new password'
+            value={newPassword}
+            onChange={setNewPassword}
+            show={showNew}
+            onToggle={() => setShowNew((v) => !v)}
+          />
+          <div className='mb-6'>
             <PasswordField
-              label='Current Password'
-              placeholder='Enter current password'
-              value={currentPassword}
-              onChange={setCurrentPassword}
-              show={showCurrent}
-              onToggle={() => setShowCurrent((v) => !v)}
+              label='Confirm New Password'
+              placeholder='Confirm new password'
+              value={confirmPassword}
+              onChange={setConfirmPassword}
+              show={showConfirm}
+              onToggle={() => setShowConfirm((v) => !v)}
             />
-            <PasswordField
-              label='New Password'
-              placeholder='Enter new password'
-              value={newPassword}
-              onChange={setNewPassword}
-              show={showNew}
-              onToggle={() => setShowNew((v) => !v)}
-            />
-            <div className='mb-6'>
-              <PasswordField
-                label='Confirm New Password'
-                placeholder='Confirm new password'
-                value={confirmPassword}
-                onChange={setConfirmPassword}
-                show={showConfirm}
-                onToggle={() => setShowConfirm((v) => !v)}
-              />
-            </div>
-
-            <div className='flex justify-end gap-3 flex-col-reverse sm:flex-row'>
-              <button 
-                onClick={handleCancel}
-                className='px-5 py-3 text-[16px] border border-gray-300 rounded-md text-(--primary-text-color) hover:bg-gray-50 transition-colors'>
-                Cancel
-              </button>
-              <button 
-                onClick={handleUpdatePassword}
-                className='px-5 py-2 text-[16px] bg-[#3d6e50] hover:bg-[#2f5a41] text-white rounded-md transition-colors'>
-                Update Password
-              </button>
-            </div>
-          </>
-        ) : (
-          <div className='text-center py-8 text-gray-500'>
-            <p className="mb-2">Your password is securely stored.</p>
-            <p className="text-sm">{`Click "Edit" to change your password.`}</p>
           </div>
-        )}
+          {errorMsg && <div className='text-red-600 mb-3'>{errorMsg}</div>}
+          {successMsg && (
+            <div className='text-green-600 mb-3'>{successMsg}</div>
+          )}
+          <div className='flex justify-end gap-3 flex-col-reverse sm:flex-row '>
+            <button
+              type='button'
+              className='px-5 py-3 text-[16px] border border-gray-300 rounded-md text-(--primary-text-color) hover:bg-gray-50 transition-colors'
+              onClick={() => {
+                setCurrentPassword("");
+                setNewPassword("");
+                setConfirmPassword("");
+                setErrorMsg("");
+                setSuccessMsg("");
+              }}
+              disabled={loading}>
+              Cancel
+            </button>
+            <button
+              type='submit'
+              className='px-5 py-2 text-[16px] bg-[#3d6e50] hover:bg-[#2f5a41] text-white rounded-md transition-colors'
+              disabled={loading}>
+              {loading ? "Updating..." : "Update Password"}
+            </button>
+          </div>
+        </form>
       </div>
 
     
