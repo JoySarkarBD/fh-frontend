@@ -1,5 +1,6 @@
 "use client";
 
+import { useLogoutMutation } from "@/actions/hooks/auth.hooks";
 import {
   Calculator,
   ChevronDown,
@@ -17,7 +18,6 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { FiBookmark, FiGrid, FiHome, FiSettings } from "react-icons/fi";
-import { useLogoutMutation } from "@/actions/hooks/auth.hooks";
 
 export default function DashboardSidebar() {
   const router = useRouter();

@@ -1,9 +1,9 @@
 "use server";
 
-import { AxiosError } from "axios";
 import type { ApiResponse } from "@/lib/api";
-import type { PaginatedPropertiesResponse } from "./property";
 import { axiosServer } from "@/lib/axiosServer";
+import { AxiosError } from "axios";
+import type { PaginatedPropertiesResponse } from "./property";
 
 interface ApiErrorResponse {
   message?: string;

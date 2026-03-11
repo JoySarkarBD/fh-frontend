@@ -1,8 +1,8 @@
 "use client";
 
+import { useGetAllPropertiesAdmin } from "@/actions/hooks/property.hooks";
 import Image from "next/image";
 import Link from "next/link";
-import { useGetAllPropertiesAdmin } from "@/actions/hooks/property.hooks";
 
 export default function RecentCreatedProperties() {
   // Fetch all properties (large limit to get all)

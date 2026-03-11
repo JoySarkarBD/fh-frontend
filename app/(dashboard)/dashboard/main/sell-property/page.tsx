@@ -2,7 +2,23 @@
 
 import { useUserOwnProperties } from "@/actions/hooks/property.hooks";
 import Card from "@/components/shared/Card/Card";
+import { IPropertyResponse, PropertyMediaItem } from "@/services/property";
 import { Bath, Bed, Square } from "lucide-react";
+
+// Helper function to get thumbnail URL
+const getThumbnailUrl = (thumbnail: string | PropertyMediaItem | null | undefined): string => {
+  if (!thumbnail) return "/property.png";
+  
+  // If it's a string (direct URL)
+  if (typeof thumbnail === "string") return thumbnail;
+  
+  // If it's a PropertyMediaItem object
+  if (typeof thumbnail === "object" && thumbnail !== null) {
+    return thumbnail.image || "/property.png";
+  }
+  
+  return "/property.png";
+};
 
 const Page = () => {
   const { data, isLoading, isError } = useUserOwnProperties({ page: 1, limit: 50 });
@@ -20,28 +36,28 @@ const Page = () => {
 
       <div>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-             {properties.map((p: any) => (
-              <Card
-                key={p._id}
-                id={p._id}
-                imageUrl={p.thumbnail?.image ?? "/property.png"}
-                badge={p.status ?? "For Sale"}
-                title={p.propertyName} // <-- propertyName in your API
-                subtitle={p.address ?? p.overview}
-                meta={[
-                  { label: "Beds", value: p.bedrooms, icon: Bed },
-                  { label: "Baths", value: p.bathrooms, icon: Bath },
-                  {
-                    label: "Sqft",
-                    value: p.squareFeet?.toLocaleString(),
-                    icon: Square,
-                  },
-                ]}
-                price={p.price}
-                type="own-property"
-           primaryActionLabel={p.isPublished ? "View Details" : "Post Now"} // Use IsPosted instead of isPublished
-              />
-            ))}
+          {properties.map((p: IPropertyResponse) => (
+            <Card
+              key={p._id || p.id}
+              id={p._id || p.id}
+              imageUrl={getThumbnailUrl(p.thumbnail)}
+              badge={p.status ?? "For Sale"}
+              title={p.propertyName}
+              subtitle={p.address ?? p.overview}
+              meta={[
+                { label: "Beds", value: p.bedrooms, icon: Bed },
+                { label: "Baths", value: p.bathrooms, icon: Bath },
+                {
+                  label: "Sqft",
+                  value: p.squareFeet?.toLocaleString(),
+                  icon: Square,
+                },
+              ]}
+              price={p.price}
+              type="own-property"
+              primaryActionLabel={p.isPublished ? "View Details" : "Post For Sale"}
+            />
+          ))}
         </div>
       </div>
     </div>

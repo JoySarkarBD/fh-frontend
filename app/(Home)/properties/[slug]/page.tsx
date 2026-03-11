@@ -1,17 +1,92 @@
 'use client';
 
-import { usePropertyById } from "@/actions/hooks/property.hooks";
+import { useUserProfile } from "@/actions/hooks/auth.hooks";
+import {
+  useDeletePropertyMutation,
+  useIsPropertySaved,
+  usePropertyById,
+  useSavePropertyMutation,
+  useUnsavePropertyMutation,
+} from "@/actions/hooks/property.hooks";
 import Gallery from "@/components/home/property/Gallery";
 import Location from "@/components/home/property/Location";
 import ViewButton from "@/components/shared/ViewButton/ViewButton";
-import { Bath, Bed, Heart, MapPin, MessageCircleMore, Square } from "lucide-react";
-import { useParams } from "next/navigation";
+import { Bath, Bed, Heart, MapPin, MessageCircleMore, Pencil, Square, Trash2 } from "lucide-react";
+import { useParams, useRouter } from "next/navigation";
+
+interface UserLike {
+  _id?: string;
+  id?: string;
+}
+
+interface PropertyOwnerLike {
+  _id?: string;
+  id?: string;
+}
+
+
+// Helper function to safely get property owner ID
+const getPropertyOwnerId = (propertyOwner: PropertyOwnerLike | string | number | undefined): string => {
+  if (!propertyOwner) return "";
+  
+  // If it's an object with _id or id
+  if (typeof propertyOwner === "object") {
+    return String(propertyOwner._id ?? propertyOwner.id ?? "");
+  }
+  
+  // If it's a string or number
+  return String(propertyOwner);
+};
 
 export default function Page() {
+  const router = useRouter();
   const { slug: rawSlug } = useParams<{ slug: string }>();
   const slug = Array.isArray(rawSlug) ? rawSlug[0] : rawSlug;
   const { data, isLoading, isError, error } = usePropertyById(slug ?? "");
+  const { data: userProfile } = useUserProfile();
   const property = data?.data;
+  const propertyId = String(property?._id ?? property?.id ?? "");
+  
+  // Safely get current user ID
+  const currentUserId = String(
+    (userProfile && typeof userProfile === "object" 
+      ? (userProfile as UserLike)._id ?? (userProfile as UserLike).id ?? "" 
+      : "")
+  );
+  
+  // Safely get property owner ID
+  const propertyOwnerId = getPropertyOwnerId(property?.propertyOwner);
+  
+  const isOwner =
+    Boolean(currentUserId) &&
+    Boolean(propertyOwnerId) &&
+    currentUserId === propertyOwnerId;
+
+  const {
+    data: isSavedResponse,
+    refetch: refetchSavedState,
+  } = useIsPropertySaved(propertyId, {
+    enabled: Boolean(propertyId) && Boolean(currentUserId) && !isOwner,
+  });
+  const isSaved = Boolean(isSavedResponse?.data?.isSaved);
+
+  const savePropertyMutation = useSavePropertyMutation({
+    onSuccess: () => {
+      void refetchSavedState();
+    },
+  });
+  const unsavePropertyMutation = useUnsavePropertyMutation({
+    onSuccess: () => {
+      void refetchSavedState();
+    },
+  });
+
+  const deletePropertyMutation = useDeletePropertyMutation({
+    onSuccess: () => {
+      router.push("/dashboard/main/own-property");
+      router.refresh();
+    },
+  });
 
   const keyFeatures = property?.keyFeatures
     ? property.keyFeatures
@@ -49,6 +124,29 @@ export default function Page() {
     return <div className='p-8 text-red-500'>{error?.message || "Failed to load property"}</div>;
   }
   if (!property) return <div className='p-8'>Property not found</div>;
+
+  const handleDelete = () => {
+    if (!propertyId || deletePropertyMutation.isPending) return;
+
+    const isConfirmed = window.confirm("Are you sure you want to delete this property?");
+    if (!isConfirmed) return;
+
+    deletePropertyMutation.mutate(propertyId);
+  };
+
+  const handleToggleSave = () => {
+    if (!propertyId) return;
+    if (!currentUserId) {
+      router.push("/login");
+      return;
+    }
+    if (savePropertyMutation.isPending || unsavePropertyMutation.isPending) return;
+    if (isSaved) {
+      unsavePropertyMutation.mutate(propertyId);
+    } else {
+      savePropertyMutation.mutate(propertyId);
+    }
+  };
 
   return (
     <div className='md:mx-12.5 px-6 lg:px-8 py-8'>
@@ -134,17 +232,50 @@ export default function Page() {
                       })}
                     </p>
                   </div>
-                  <div className='flex items-center justify-center text-center gap-x-4'>
-                    <ViewButton
-                      icon={<MessageCircleMore className='h-5 w-5' />}
-                      label='Message'
-                      href='/message'
-                      className='flex flex-row items-center justify-center'
-                    />
-                    <div className='border border-[#D1CEC6] rounded-lg p-3'>
-                      <Heart className='text-(--primary)' />
+                  {isOwner ? (
+                    <div className='flex items-center justify-center text-center gap-x-4'>
+                      <ViewButton
+                        icon={<Pencil className='h-5 w-5' />}
+                        label='Edit'
+                        href={`/dashboard/main/own-property/update/${property._id ?? property.id}`}
+                        className='flex flex-row items-center justify-center'
+                      />
+                      <button
+                        type='button'
+                        onClick={handleDelete}
+                        disabled={deletePropertyMutation.isPending}
+                        className='border border-red-300 text-red-600 rounded-lg p-3 hover:bg-red-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed'
+                        aria-label='Delete property'>
+                        <Trash2 className='h-5 w-5' />
+                      </button>
                     </div>
-                  </div>
+                  ) : (
+                    <div className='flex items-center justify-center text-center gap-x-4'>
+                      <ViewButton
+                        icon={<MessageCircleMore className='h-5 w-5' />}
+                        label='Message'
+                        href={
+                          propertyOwnerId
+                            ? `/dashboard/profile/message?userId=${propertyOwnerId}&propertyId=${propertyId}`
+                            : "/dashboard/profile/message"
+                        }
+                        className='flex flex-row items-center justify-center'
+                      />
+                      <button
+                        type='button'
+                        onClick={handleToggleSave}
+                        disabled={
+                          savePropertyMutation.isPending ||
+                          unsavePropertyMutation.isPending
+                        }
+                        className='border border-[#D1CEC6] rounded-lg p-3 disabled:opacity-50 disabled:cursor-not-allowed'
+                        aria-label={isSaved ? "Unsave property" : "Save property"}>
+                        <Heart
+                          className={isSaved ? "fill-red-500 text-red-500" : "text-(--primary)"}
+                        />
+                      </button>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>

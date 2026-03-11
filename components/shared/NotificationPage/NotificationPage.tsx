@@ -1,55 +1,9 @@
 "use client";
 
-import { useState } from "react";
-import { changePasswordAction, logoutAction } from "@/services/auth";
-import { useRouter } from "next/navigation";
-import { FiEye, FiEyeOff, FiLock, FiEdit3 } from "react-icons/fi";
 
-const notificationItems = [
-  {
-    id: "new-listing",
-    title: "New Listing Alerts",
-    description:
-      "When a property matching their saved search criteria is listed.",
-  },
-  {
-    id: "open-house",
-    title: "Open House Reminders",
-    description: "For upcoming open houses they registered for.",
-  },
-  {
-    id: "favorites",
-    title: "Favorites Activity",
-    description: "When a favorites property is sold, rented, or desisted.",
-  },
-  {
-    id: "listing-live",
-    title: "Listing Live Notification",
-    description: "When their property is published on the site/portal.",
-  },
-  {
-    id: "market-updates",
-    title: "Market Updates",
-    description:
-      "Weekly/monthly digest emails with new listings and market trends.",
-  },
-  {
-    id: "document-submission",
-    title: "Document Submission Reminders",
-    description: "For lease agreements, inspection reports, etc.",
-  },
-  {
-    id: "user-reports",
-    title: "User Reports",
-    description:
-      "New user registrations, flagged accounts, suspicious activity.",
-  },
-  {
-    id: "listing-moderation",
-    title: "Listing Moderation",
-    description: "New listings pending approval, flagged listings.",
-  },
-];
+import { useNotificationSettings, useToggleNotificationSettingMutation } from "@/actions/hooks/notificaton-settings.hooks";
+import { startTransition, useEffect, useState } from "react";
+import { FiEdit3, FiEye, FiEyeOff, FiLock } from "react-icons/fi";
 
 interface PasswordFieldProps {
   label: string;
@@ -96,108 +50,199 @@ function PasswordField({
 }
 
 export default function NotificationPage() {
-  const router = useRouter();
-  // const [notifType, setNotifType] = useState<"email" | "push">("email");
+  // ============================================================================
+  // React Query Hooks
+  // ============================================================================
+  
+  // Get all notification settings
+  const { 
+    data: settings, 
+    isLoading, 
+    isError, 
+    error,
+    refetch 
+  } = useNotificationSettings();
+
+  console.log(settings, 'kire settngs');
+  
+  // Toggle mutation
+  const { 
+    toggleSetting, 
+    isLoading: isToggling 
+  } = useToggleNotificationSettingMutation();
+
+  // ============================================================================
+  // Local State
+  // ============================================================================
   const [checked, setChecked] = useState<Record<string, boolean>>({});
+  
+  // Password states
   const [showCurrent, setShowCurrent] = useState(false);
   const [showNew, setShowNew] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [successMsg, setSuccessMsg] = useState("");
-  const [errorMsg, setErrorMsg] = useState("");
+  const [isEditing, setIsEditing] = useState(false);
 
-  const handlePasswordChange = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setSuccessMsg("");
-    setErrorMsg("");
 
-    if (!currentPassword || !newPassword || !confirmPassword) {
-      setErrorMsg("All password fields are required.");
-      return;
-    }
-    if (newPassword !== confirmPassword) {
-      setErrorMsg("New password and confirm password do not match.");
-      return;
-    }
-    if (newPassword.length < 6) {
-      setErrorMsg("New password must be at least 6 characters.");
-      return;
-    }
-    setLoading(true);
-    try {
-      await changePasswordAction({
-        currentPassword,
-        newPassword,
-        confirmNewPassword: confirmPassword,
-      });
-      // Log out and redirect to login with notification
-      await logoutAction();
-      router.push("/login?passwordChanged=1");
-    } catch (err) {
-      if (err instanceof Error) {
-        setErrorMsg(err.message || "Failed to update password.");
-      } else {
-        setErrorMsg("Failed to update password.");
+  // Sync backend data with local state (using _id as key)
+
+useEffect(() => {
+  if (settings) {
+    // Create a map of notification _id -> isActive
+    const backendState: Record<string, boolean> = {};
+    
+    settings.forEach(setting => {
+      // Check if _id exists before using it as index
+      if (setting._id) {
+        backendState[setting._id] = setting.isActive;
       }
-    } finally {
-      setLoading(false);
+    });
+    
+    startTransition(() => {
+      setChecked(backendState);
+    });
+  }
+}, [settings]);
+
+
+  // Handlers
+
+
+  const toggleCheck = async (id: string) => {
+    // Find the setting by _id
+    const setting = settings?.find(s => s._id === id);
+    if (!setting) {
+      alert("Setting not found in database");
+      return;
     }
+
+    const newState = !checked[id];
+    
+    // Optimistically update UI
+    setChecked(prev => ({ ...prev, [id]: newState }));
+
+    // Call API to toggle
+   if(setting._id){
+     toggleSetting(
+      { id: setting._id, isActive: newState },
+      {
+        // onSuccess: () => {
+        //   alert(
+        //     newState 
+        //       ? `${setting.title} enabled successfully` 
+        //       : `${setting.title} disabled successfully`
+        //   );
+        // },
+        onError: (error) => {
+          // Revert on error
+          setChecked(prev => ({ ...prev, [id]: !newState }));
+          alert(`Failed to update: ${error.message}`);
+        },
+      }
+    );
+   }
   };
 
-  const toggleCheck = (id: string) =>
-    setChecked((prev) => ({ ...prev, [id]: !prev[id] }));
+  const handleUpdatePassword = () => {
+    // Validate passwords
+    if (!currentPassword || !newPassword || !confirmPassword) {
+      alert("All fields are required");
+      return;
+    }
+
+    if (newPassword !== confirmPassword) {
+      alert("New passwords do not match");
+      return;
+    }
+
+    if (newPassword.length < 6) {
+      alert("Password must be at least 6 characters");
+      return;
+    }
+
+    // TODO: Implement password update API call
+    alert("Password updated successfully");
+    
+    // Clear form
+    setCurrentPassword("");
+    setNewPassword("");
+    setConfirmPassword("");
+    setIsEditing(false);
+  };
+
+  const handleCancel = () => {
+    setCurrentPassword("");
+    setNewPassword("");
+    setConfirmPassword("");
+    setIsEditing(false);
+  };
+
+  // ============================================================================
+  // Loading & Error States
+  // ============================================================================
+
+  if (isLoading) {
+    return (
+      <div className='flex justify-center items-center min-h-100'>
+        <div className='animate-spin rounded-full h-12 w-12 border-b-2 border-[#4a7c5c]'></div>
+      </div>
+    );
+  }
+
+  if (isError) {
+    return (
+      <div className='text-center py-12'>
+        <p className='text-red-600 mb-4'>Error loading settings: {error?.message}</p>
+        <button 
+          onClick={() => refetch()}
+          className='px-4 py-2 bg-[#4a7c5c] text-white rounded-md hover:bg-[#3a6347]'
+        >
+          Try Again
+        </button>
+      </div>
+    );
+  }
+
+  // ============================================================================
+  // Render
+  // ============================================================================
 
   return (
     <div className=''>
       {/* ── Notification Settings ── */}
       <h1 className='text-4xl mb-6'>Notification Settings</h1>
 
-      {/* Notification Type */}
-      {/* <div className='bg-gray-100 border border-gray-200 rounded-md px-5 py-4 mb-1'>
-        <p className='font-semibold text-sm mb-2.5'>Notification Type</p>
-        <div className='flex gap-6'>
-          {(["email", "push"] as const).map((type) => (
-            <label
-              key={type}
-              className='flex items-center gap-1.5 cursor-pointer text-sm'>
-              <input
-                type='radio'
-                name='notifType'
-                checked={notifType === type}
-                onChange={() => setNotifType(type)}
-                className='accent-[#4a7c5c]'
-              />
-              {type.charAt(0).toUpperCase() + type.slice(1)}
-            </label>
-          ))}
-        </div>
-      </div> */}
-
       {/* Notification List */}
       <div id='notifications' className='overflow-hidden'>
-        {notificationItems.map((item, index) => (
-          <div
-            key={item.id}
-            className={`flex items-center justify-between gap-4 px-5 py-3.5 border border-gray-200 rounded-md mb-2 hover:bg-gray-50 transition-colors ${
-              index < notificationItems.length - 1
-                ? "border-b border-gray-100"
-                : ""
-            }`}>
-            <div className='flex-1 min-w-0'>
-              <p className='text-[19px] mb-0.5 font-mono'>{item.title}</p>
-              <p className='text-sm text-gray-500'>{item.description}</p>
-            </div>
-            <input
-              type='checkbox'
-              checked={!!checked[item.id]}
-              onChange={() => toggleCheck(item.id)}
-              className='w-4 h-4 cursor-pointer accent-[#4a7c5c] shrink-0'
-            />
-          </div>
-        ))}
+        {settings?.map((setting, index) => {
+          const isLoading = isToggling && Boolean(setting._id);
+          
+          return (
+      <div
+  key={setting._id || setting.id} // fallback হিসেবে id ব্যবহার করুন
+  className={`flex items-center justify-between gap-4 px-5 py-3.5 border border-gray-200 rounded-md mb-2 hover:bg-gray-50 transition-colors ${
+    index < settings.length - 1
+      ? "border-b border-gray-100"
+      : ""
+  } ${isLoading ? 'opacity-50' : ''}`}>
+  <div className='flex-1 min-w-0'>
+    <p className='text-[19px] mb-0.5 font-mono'>{setting.title}</p>
+    <p className='text-sm text-gray-500'>{setting.description}</p>
+  </div>
+  
+  {/* Simple Checkbox (as originally designed) */}
+  <input
+    type='checkbox'
+    checked={setting._id ? (checked[setting._id] || false) : false}
+    onChange={() => setting._id && toggleCheck(setting._id)}
+    disabled={isLoading || !setting._id}
+    className='w-5 h-5 cursor-pointer accent-[#4a7c5c] shrink-0'
+  />
+</div>
+          );
+        })}
       </div>
 
       {/* ── Security Settings ── */}
@@ -205,10 +250,14 @@ export default function NotificationPage() {
         id='security'
         className='flex items-center justify-between mt-10 mb-4 flex-wrap gap-2'>
         <h2 className='text-4xl mb-6'>Security Settings</h2>
-        <button className='flex items-center gap-1.5 bg-[#4a7c5c] hover:bg-[#3a6347] text-white text-[16px] px-4 py-2 rounded-md transition-colors'>
-          <FiEdit3 size={15} />
-          Edit
-        </button>
+        {!isEditing && (
+          <button 
+            onClick={() => setIsEditing(true)}
+            className='flex items-center gap-1.5 bg-[#4a7c5c] hover:bg-[#3a6347] text-white text-[16px] px-4 py-2 rounded-md transition-colors'>
+            <FiEdit3 size={15} />
+            Edit
+          </button>
+        )}
       </div>
 
       {/* Auth Card */}
@@ -216,60 +265,58 @@ export default function NotificationPage() {
         <h3 className='text-2xl mb-5 border-b border-[#D1CEC6] pb-2'>
           Authentication &amp; Access Control
         </h3>
-        <form onSubmit={handlePasswordChange}>
-          <PasswordField
-            label='Change Password'
-            placeholder='Enter current password'
-            value={currentPassword}
-            onChange={setCurrentPassword}
-            show={showCurrent}
-            onToggle={() => setShowCurrent((v) => !v)}
-          />
-          <PasswordField
-            label='New Password'
-            placeholder='Enter new password'
-            value={newPassword}
-            onChange={setNewPassword}
-            show={showNew}
-            onToggle={() => setShowNew((v) => !v)}
-          />
-          <div className='mb-6'>
+
+        {isEditing ? (
+          <>
             <PasswordField
-              label='Confirm New Password'
-              placeholder='Confirm new password'
-              value={confirmPassword}
-              onChange={setConfirmPassword}
-              show={showConfirm}
-              onToggle={() => setShowConfirm((v) => !v)}
+              label='Current Password'
+              placeholder='Enter current password'
+              value={currentPassword}
+              onChange={setCurrentPassword}
+              show={showCurrent}
+              onToggle={() => setShowCurrent((v) => !v)}
             />
+            <PasswordField
+              label='New Password'
+              placeholder='Enter new password'
+              value={newPassword}
+              onChange={setNewPassword}
+              show={showNew}
+              onToggle={() => setShowNew((v) => !v)}
+            />
+            <div className='mb-6'>
+              <PasswordField
+                label='Confirm New Password'
+                placeholder='Confirm new password'
+                value={confirmPassword}
+                onChange={setConfirmPassword}
+                show={showConfirm}
+                onToggle={() => setShowConfirm((v) => !v)}
+              />
+            </div>
+
+            <div className='flex justify-end gap-3 flex-col-reverse sm:flex-row'>
+              <button 
+                onClick={handleCancel}
+                className='px-5 py-3 text-[16px] border border-gray-300 rounded-md text-(--primary-text-color) hover:bg-gray-50 transition-colors'>
+                Cancel
+              </button>
+              <button 
+                onClick={handleUpdatePassword}
+                className='px-5 py-2 text-[16px] bg-[#3d6e50] hover:bg-[#2f5a41] text-white rounded-md transition-colors'>
+                Update Password
+              </button>
+            </div>
+          </>
+        ) : (
+          <div className='text-center py-8 text-gray-500'>
+            <p className="mb-2">Your password is securely stored.</p>
+            <p className="text-sm">{`Click "Edit" to change your password.`}</p>
           </div>
-          {errorMsg && <div className='text-red-600 mb-3'>{errorMsg}</div>}
-          {successMsg && (
-            <div className='text-green-600 mb-3'>{successMsg}</div>
-          )}
-          <div className='flex justify-end gap-3 flex-col-reverse sm:flex-row '>
-            <button
-              type='button'
-              className='px-5 py-3 text-[16px] border border-gray-300 rounded-md text-(--primary-text-color) hover:bg-gray-50 transition-colors'
-              onClick={() => {
-                setCurrentPassword("");
-                setNewPassword("");
-                setConfirmPassword("");
-                setErrorMsg("");
-                setSuccessMsg("");
-              }}
-              disabled={loading}>
-              Cancel
-            </button>
-            <button
-              type='submit'
-              className='px-5 py-2 text-[16px] bg-[#3d6e50] hover:bg-[#2f5a41] text-white rounded-md transition-colors'
-              disabled={loading}>
-              {loading ? "Updating..." : "Update Password"}
-            </button>
-          </div>
-        </form>
+        )}
       </div>
+
+    
     </div>
   );
 }

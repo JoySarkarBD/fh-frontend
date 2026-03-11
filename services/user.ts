@@ -24,6 +24,12 @@ export type DashboardStatsResponse = {
   totalRevenue: number;
   pendingCommunication: number;
   conversionRate: number;
+  revenueTrend: Array<{ month: string; revenue: number }>;
+  sellingOverview: Array<{ month: string; sales: number }>;
+  userDistribution: {
+    subscribed: number;
+    unsubscribed: number;
+  };
 };
 interface ApiErrorResponse {
   message?: string;

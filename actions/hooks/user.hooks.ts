@@ -1,12 +1,12 @@
+import axiosClient from "@/lib/axiosClient";
 import {
   DashboardStatsResponse,
   getAdminDashboardStats,
+  getAllUsers,
+  getUserById,
   UsersResponse,
 } from "@/services/user";
-import { getAllUsers } from "@/services/user";
-import axiosClient from "@/lib/axiosClient";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
-import { getUserById } from "@/services/user";
 
 /**
  * Hook for fetching the current user's profile information using the client-side axios instance.
