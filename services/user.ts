@@ -1,4 +1,5 @@
 "use server";
+
 import axiosClient from "@/lib/axiosClient";
 import { axiosServer } from "@/lib/axiosServer";
 import { AxiosError } from "axios";
@@ -137,6 +138,12 @@ export const getUserById = async (id: string) => {
   }
 };
 
+/**
+ * Get Admin Dashboard Stats
+ *
+ * @returns Dashboard statistics data for admin users, including total users, new users this month, active subscribers, total revenue, pending communications, and conversion rate.
+ * @throws An error if the request fails, with details logged to the console for debugging.
+ */
 export const getAdminDashboardStats =
   async (): Promise<DashboardStatsResponse> => {
     try {
@@ -164,3 +171,30 @@ export const getAdminDashboardStats =
       );
     }
   };
+
+/**
+ * Toggle suspend/unsuspend a user by ID (admin only)
+ * @param id - User ID
+ * @returns Updated user data
+ */
+export const suspendToggleUser = async (id: string) => {
+  try {
+    const axiosInstance = await getAxiosInstance();
+    const { data } = await axiosInstance.patch<{
+      success: boolean;
+      data: AdminUser;
+    }>(`/users/${id}/suspend-toggle`);
+    if (!data.success || !data.data) {
+      throw new Error("Invalid response format from /users/:id/suspend-toggle");
+    }
+    return data.data;
+  } catch (err) {
+    const error = err as AxiosError<ApiErrorResponse>;
+    throw new Error(
+      error.response?.data?.message ||
+        (error.message === "Network Error"
+          ? "Request blocked. Check backend CORS origin settings."
+          : "Failed to toggle user suspension"),
+    );
+  }
+};

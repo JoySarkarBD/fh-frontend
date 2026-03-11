@@ -62,7 +62,7 @@ export async function middleware(req: NextRequest) {
       // Create a request-like object for the server action
       // We need to pass the token since middleware runs on edge
       const userState = await getCurrentUserFromTokenAction();
-      console.log(userState, "user state ge");
+      // console.log(userState, "user state get");
       userRole = userState.userRole;
       isSubscribed = userState.isSubscribed;
     } catch (error) {

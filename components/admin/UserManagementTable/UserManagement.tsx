@@ -5,15 +5,22 @@ import UserDetailsModal from "./UserDetailsModal";
 import Image from "next/image";
 import { useGetAllUsersAdmin } from "@/actions/hooks/user.hooks";
 import Pagination from "@/components/pagination/Pagination";
-import { Loader2, Search } from "lucide-react";
+import { Loader2, Search, MoreVertical } from "lucide-react";
+import { suspendToggleUser } from "@/services/user";
 
 const PER_PAGE = 9;
 
 export default function UserManagement() {
+  // All hooks at the top, before any conditional logic
   const [currentPage, setCurrentPage] = useState(1);
   const [searchInput, setSearchInput] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
   const [modalUserId, setModalUserId] = useState<string | null>(null);
+  const [menuOpenId, setMenuOpenId] = useState<string | null>(null);
+  const [suspendLoadingId, setSuspendLoadingId] = useState<string | null>(null);
+  const [userSuspendState, setUserSuspendState] = useState<
+    Record<string, boolean>
+  >({});
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -42,6 +49,21 @@ export default function UserManagement() {
     (user) => String(user.role || "").toUpperCase() !== "ADMIN",
   );
 
+  // Initialize userSuspendState only when users are loaded and state is empty
+  useEffect(() => {
+    if (
+      filteredUsers.length > 0 &&
+      Object.keys(userSuspendState).length === 0
+    ) {
+      const state: Record<string, boolean> = {};
+      filteredUsers.forEach((user) => {
+        state[String(user._id)] = !!user.isSuspended;
+      });
+      setUserSuspendState(state);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filteredUsers]);
+
   // Initial loading only (keep layout mounted during subsequent fetches)
   if (isLoading && !data) {
     return (
@@ -64,21 +86,7 @@ export default function UserManagement() {
     );
   }
 
-  // Table rows
-  type TableRow = {
-    id: string;
-    image: string;
-    profileName: string;
-    email: string;
-    phone: string;
-    address: string;
-    subscription: boolean;
-    propertiesOwn: number;
-    propertiesBuy: number;
-    propertiesSell: number;
-  };
-
-  const tableRows: TableRow[] = filteredUsers.map((user) => ({
+  const tableRows = filteredUsers.map((user) => ({
     id: user._id ? String(user._id) : "",
     image: "/user.png",
     profileName: user.name || "Unknown",
@@ -92,6 +100,7 @@ export default function UserManagement() {
       typeof user.propertyBuyCount === "number" ? user.propertyBuyCount : 0,
     propertiesSell:
       typeof user.propertySellCount === "number" ? user.propertySellCount : 0,
+    isSuspended: userSuspendState[String(user._id)] ?? false,
   }));
 
   return (
@@ -208,14 +217,53 @@ export default function UserManagement() {
                     {user.propertiesSell}
                   </td>
 
-                  <td className='px-6 py-4 whitespace-nowrap text-right'>
+                  <td className='px-6 py-4 whitespace-nowrap text-right relative flex items-center justify-center'>
                     <button
                       onClick={() =>
                         setModalUserId(user.id ? String(user.id) : "")
                       }
-                      className='text-sm text-[#1B1B1A] underline underline-offset-2 transition-colors cursor-pointer hover:text-[#619B7F]'>
+                      className='text-sm text-[#1B1B1A] underline underline-offset-2 transition-colors cursor-pointer hover:text-[#619B7F] mr-2'>
                       View Details
                     </button>
+                    <button
+                      className='inline-flex items-center justify-center p-1 rounded-full hover:bg-gray-100 focus:outline-none'
+                      onClick={() =>
+                        setMenuOpenId(menuOpenId === user.id ? null : user.id)
+                      }
+                      aria-label='More actions'
+                      type='button'>
+                      <MoreVertical className='w-5 h-5 text-gray-500' />
+                    </button>
+                    {menuOpenId === user.id && (
+                      <div className='absolute right-12 z-20 mt-16 w-44 bg-white border border-gray-200 rounded shadow-lg py-1'>
+                        <button
+                          className='w-full text-left px-4 py-2 text-sm hover:bg-gray-50 flex items-center gap-2 disabled:opacity-60'
+                          disabled={suspendLoadingId === user.id}
+                          onClick={async () => {
+                            setSuspendLoadingId(user.id);
+                            try {
+                              const updated = await suspendToggleUser(user.id);
+                              setUserSuspendState((prev) => ({
+                                ...prev,
+                                [user.id]: !!updated.isSuspended,
+                              }));
+                              setMenuOpenId(null);
+                            } catch (err) {
+                              alert(
+                                (err as Error).message ||
+                                  "Failed to toggle suspension",
+                              );
+                            } finally {
+                              setSuspendLoadingId(null);
+                            }
+                          }}>
+                          {suspendLoadingId === user.id ? (
+                            <Loader2 className='w-4 h-4 animate-spin mr-2' />
+                          ) : null}
+                          {user.isSuspended ? "Unsuspend user" : "Suspend user"}
+                        </button>
+                      </div>
+                    )}
                   </td>
                 </tr>
               ))
