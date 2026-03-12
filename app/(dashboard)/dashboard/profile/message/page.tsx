@@ -14,7 +14,13 @@ import {
 } from "@/actions/hooks/chat.hooks";
 import { useUserProfile } from "@/actions/hooks/auth.hooks";
 import { getChatSocket } from "@/lib/chatSocket";
-import type { ChatConversation, ChatMessage, PaginatedChatMessages, PaginatedChatConversations, ChatAttachment } from "@/services/chat";
+import type {
+  ChatConversation,
+  ChatMessage,
+  PaginatedChatMessages,
+  PaginatedChatConversations,
+  ChatAttachment,
+} from "@/services/chat";
 import type { ApiResponse } from "@/lib/api";
 import {
   FileText,
@@ -77,7 +83,7 @@ const isImageUrl = (url: string) =>
 
 const isImageFile = (file: File) => file.type.startsWith("image/");
 
-  function UserMessage() {
+function UserMessage() {
   const queryClient = useQueryClient();
   const socketRef = useRef<Socket | null>(null);
 
@@ -137,7 +143,11 @@ const isImageFile = (file: File) => file.type.startsWith("image/");
     if (hasNextConversationsPage && !isFetchingNextConversationsPage) {
       void fetchNextConversationsPage();
     }
-  }, [fetchNextConversationsPage, hasNextConversationsPage, isFetchingNextConversationsPage]);
+  }, [
+    fetchNextConversationsPage,
+    hasNextConversationsPage,
+    isFetchingNextConversationsPage,
+  ]);
 
   useEffect(() => {
     const sentinel = conversationSentinelRef.current;
@@ -152,10 +162,14 @@ const isImageFile = (file: File) => file.type.startsWith("image/");
     return () => observer.disconnect();
   }, [fetchNextConversations]);
   const visibleConversations = useMemo(() => {
-    const propertyScoped = conversations.filter((item) => Boolean(item.property?._id));
+    const propertyScoped = conversations.filter((item) =>
+      Boolean(item.property?._id),
+    );
     if (!targetUserId || !targetPropertyId) return propertyScoped;
     return propertyScoped.filter((item) => {
-      const hasTargetUser = item.participants.some((p) => p._id === targetUserId);
+      const hasTargetUser = item.participants.some(
+        (p) => p._id === targetUserId,
+      );
       return hasTargetUser && item.property?._id === targetPropertyId;
     });
   }, [conversations, targetPropertyId, targetUserId]);
@@ -187,7 +201,13 @@ const isImageFile = (file: File) => file.type.startsWith("image/");
     });
 
     return existing?._id ?? "";
-  }, [conversations, conversationsLoading, myUserId, targetPropertyId, targetUserId]);
+  }, [
+    conversations,
+    conversationsLoading,
+    myUserId,
+    targetPropertyId,
+    targetUserId,
+  ]);
 
   useEffect(() => {
     if (!myUserId || autoInitRef.current || conversationsLoading) return;
@@ -257,7 +277,8 @@ const isImageFile = (file: File) => file.type.startsWith("image/");
     enabled: Boolean(resolvedActiveConversationId),
   });
 
-  const messages = messagesResponse?.pages.flatMap((page) => page.data?.messages ?? []) ?? [];
+  const messages =
+    messagesResponse?.pages.flatMap((page) => page.data?.messages ?? []) ?? [];
 
   useEffect(() => {
     if (!myUserId) return;
@@ -267,83 +288,80 @@ const isImageFile = (file: File) => file.type.startsWith("image/");
     socketRef.current = socket;
 
     const handleMessageReceived = (message: ChatMessage) => {
-      queryClient.setQueryData<InfiniteData<ApiResponse<PaginatedChatMessages>>>(
-        chatKeys.messages(message.conversationId),
-        (previous) => {
-          if (!previous) return previous;
-          const firstPage = previous.pages[0];
-          if (!firstPage) return previous;
-          // Deduplicate: skip if message already exists in any page
-          const exists = previous.pages.some((p) =>
-            p.data?.messages.some((m) => m._id === message._id),
-          );
-          if (exists) return previous;
-          return {
-            ...previous,
-            pages: [
-              {
-                ...firstPage,
-                data: {
-                  ...firstPage.data,
-                  messages: [message, ...(firstPage.data?.messages ?? [])],
-                  count: (firstPage.data?.count ?? 0) + 1,
-                  nextCursor: firstPage.data?.nextCursor ?? null,
-                },
+      queryClient.setQueryData<
+        InfiniteData<ApiResponse<PaginatedChatMessages>>
+      >(chatKeys.messages(message.conversationId), (previous) => {
+        if (!previous) return previous;
+        const firstPage = previous.pages[0];
+        if (!firstPage) return previous;
+        // Deduplicate: skip if message already exists in any page
+        const exists = previous.pages.some((p) =>
+          p.data?.messages.some((m) => m._id === message._id),
+        );
+        if (exists) return previous;
+        return {
+          ...previous,
+          pages: [
+            {
+              ...firstPage,
+              data: {
+                ...firstPage.data,
+                messages: [message, ...(firstPage.data?.messages ?? [])],
+                count: (firstPage.data?.count ?? 0) + 1,
+                nextCursor: firstPage.data?.nextCursor ?? null,
               },
-              ...previous.pages.slice(1),
-            ],
-          };
-        },
-      );
+            },
+            ...previous.pages.slice(1),
+          ],
+        };
+      });
     };
 
     const handleMessageUpdated = (message: ChatMessage) => {
-      queryClient.setQueryData<InfiniteData<ApiResponse<PaginatedChatMessages>>>(
-        chatKeys.messages(message.conversationId),
-        (previous) => {
-          if (!previous) return previous;
-          return {
-            ...previous,
-            pages: previous.pages.map((page) => ({
-              ...page,
-              data: page.data
-                ? {
-                    ...page.data,
-                    messages: page.data.messages.map((m) =>
-                      m._id === message._id ? { ...m, ...message } : m,
-                    ),
-                  }
-                : page.data,
-            })),
-          };
-        },
-      );
+      queryClient.setQueryData<
+        InfiniteData<ApiResponse<PaginatedChatMessages>>
+      >(chatKeys.messages(message.conversationId), (previous) => {
+        if (!previous) return previous;
+        return {
+          ...previous,
+          pages: previous.pages.map((page) => ({
+            ...page,
+            data: page.data
+              ? {
+                  ...page.data,
+                  messages: page.data.messages.map((m) =>
+                    m._id === message._id ? { ...m, ...message } : m,
+                  ),
+                }
+              : page.data,
+          })),
+        };
+      });
     };
 
     const handleMessageDeletedForMe = (payload: {
       messageId: string;
       conversationId: string;
     }) => {
-      queryClient.setQueryData<InfiniteData<ApiResponse<PaginatedChatMessages>>>(
-        chatKeys.messages(payload.conversationId),
-        (previous) => {
-          if (!previous) return previous;
-          return {
-            ...previous,
-            pages: previous.pages.map((page) => ({
-              ...page,
-              data: page.data
-                ? {
-                    ...page.data,
-                    messages: page.data.messages.filter(
-                      (m) => m._id !== payload.messageId,
-                    ),
-                  }
-                : page.data,
-            })),
-          };
-        },
-      );
+      queryClient.setQueryData<
+        InfiniteData<ApiResponse<PaginatedChatMessages>>
+      >(chatKeys.messages(payload.conversationId), (previous) => {
+        if (!previous) return previous;
+        return {
+          ...previous,
+          pages: previous.pages.map((page) => ({
+            ...page,
+            data: page.data
+              ? {
+                  ...page.data,
+                  messages: page.data.messages.filter(
+                    (m) => m._id !== payload.messageId,
+                  ),
+                }
+              : page.data,
+          })),
+        };
+      });
     };
 
     const handleMessageUnsent = (payload: {
@@ -351,28 +369,32 @@ const isImageFile = (file: File) => file.type.startsWith("image/");
       conversationId: string;
       userId: string;
     }) => {
-      queryClient.setQueryData<InfiniteData<ApiResponse<PaginatedChatMessages>>>(
-        chatKeys.messages(payload.conversationId),
-        (previous) => {
-          if (!previous) return previous;
-          return {
-            ...previous,
-            pages: previous.pages.map((page) => ({
-              ...page,
-              data: page.data
-                ? {
-                    ...page.data,
-                    messages: page.data.messages.map((m) =>
-                      m._id === payload.messageId
-                        ? { ...m, unsentForEveryone: true, message: "", attachments: [] }
-                        : m,
-                    ),
-                  }
-                : page.data,
-            })),
-          };
-        },
-      );
+      queryClient.setQueryData<
+        InfiniteData<ApiResponse<PaginatedChatMessages>>
+      >(chatKeys.messages(payload.conversationId), (previous) => {
+        if (!previous) return previous;
+        return {
+          ...previous,
+          pages: previous.pages.map((page) => ({
+            ...page,
+            data: page.data
+              ? {
+                  ...page.data,
+                  messages: page.data.messages.map((m) =>
+                    m._id === payload.messageId
+                      ? {
+                          ...m,
+                          unsentForEveryone: true,
+                          message: "",
+                          attachments: [],
+                        }
+                      : m,
+                  ),
+                }
+              : page.data,
+          })),
+        };
+      });
     };
 
     const handleConversationUpdated = (payload: {
@@ -381,35 +403,36 @@ const isImageFile = (file: File) => file.type.startsWith("image/");
     }) => {
       if (payload.userId !== myUserId) return;
 
-      queryClient.setQueryData<InfiniteData<ApiResponse<PaginatedChatConversations>>>(
-        chatKeys.conversations(),
-        (previous) => {
-          if (!previous) return previous;
-          const firstPage = previous.pages[0];
-          if (!firstPage) return previous;
-          const convs = firstPage.data?.conversations ?? [];
-          const index = convs.findIndex((c) => c._id === payload.conversation._id);
-          const updated =
-            index >= 0
-              ? convs.map((c, i) => (i === index ? payload.conversation : c))
-              : [payload.conversation, ...convs];
-          return {
-            ...previous,
-            pages: [
-              {
-                ...firstPage,
-                data: {
-                  ...firstPage.data,
-                  conversations: sortConversations(updated),
-                  nextCursor: firstPage.data?.nextCursor ?? null,
-                  hasMore: firstPage.data?.hasMore ?? false,
-                },
+      queryClient.setQueryData<
+        InfiniteData<ApiResponse<PaginatedChatConversations>>
+      >(chatKeys.conversations(), (previous) => {
+        if (!previous) return previous;
+        const firstPage = previous.pages[0];
+        if (!firstPage) return previous;
+        const convs = firstPage.data?.conversations ?? [];
+        const index = convs.findIndex(
+          (c) => c._id === payload.conversation._id,
+        );
+        const updated =
+          index >= 0
+            ? convs.map((c, i) => (i === index ? payload.conversation : c))
+            : [payload.conversation, ...convs];
+        return {
+          ...previous,
+          pages: [
+            {
+              ...firstPage,
+              data: {
+                ...firstPage.data,
+                conversations: sortConversations(updated),
+                nextCursor: firstPage.data?.nextCursor ?? null,
+                hasMore: firstPage.data?.hasMore ?? false,
               },
-              ...previous.pages.slice(1),
-            ],
-          };
-        },
-      );
+            },
+            ...previous.pages.slice(1),
+          ],
+        };
+      });
     };
 
     const handlePresenceUpdated = (payload: {
@@ -417,35 +440,37 @@ const isImageFile = (file: File) => file.type.startsWith("image/");
       isOnline: boolean;
       lastActiveAt: string | null;
     }) => {
-      queryClient.setQueryData<InfiniteData<ApiResponse<PaginatedChatConversations>>>(
-        chatKeys.conversations(),
-        (previous) => {
-          if (!previous) return previous;
-          return {
-            ...previous,
-            pages: previous.pages.map((page) => ({
-              ...page,
-              data: page.data
-                ? {
-                    ...page.data,
-                    conversations: page.data.conversations.map((conversation) => ({
+      queryClient.setQueryData<
+        InfiniteData<ApiResponse<PaginatedChatConversations>>
+      >(chatKeys.conversations(), (previous) => {
+        if (!previous) return previous;
+        return {
+          ...previous,
+          pages: previous.pages.map((page) => ({
+            ...page,
+            data: page.data
+              ? {
+                  ...page.data,
+                  conversations: page.data.conversations.map(
+                    (conversation) => ({
                       ...conversation,
-                      participants: conversation.participants.map((participant) =>
-                        participant._id === payload.userId
-                          ? {
-                              ...participant,
-                              isOnline: payload.isOnline,
-                              lastActiveAt: payload.lastActiveAt,
-                            }
-                          : participant,
+                      participants: conversation.participants.map(
+                        (participant) =>
+                          participant._id === payload.userId
+                            ? {
+                                ...participant,
+                                isOnline: payload.isOnline,
+                                lastActiveAt: payload.lastActiveAt,
+                              }
+                            : participant,
                       ),
-                    })),
-                  }
-                : page.data,
-            })),
-          };
-        },
-      );
+                    }),
+                  ),
+                }
+              : page.data,
+          })),
+        };
+      });
     };
 
     const handleMarkedSeen = (payload: {
@@ -454,28 +479,27 @@ const isImageFile = (file: File) => file.type.startsWith("image/");
     }) => {
       if (!payload.conversationId || payload.seenBy === myUserId) return;
 
-      queryClient.setQueryData<InfiniteData<ApiResponse<PaginatedChatMessages>>>(
-        chatKeys.messages(payload.conversationId),
-        (previous) => {
-          if (!previous) return previous;
-          return {
-            ...previous,
-            pages: previous.pages.map((page) => ({
-              ...page,
-              data: page.data
-                ? {
-                    ...page.data,
-                    messages: page.data.messages.map((message) =>
-                      message.senderId === myUserId
-                        ? { ...message, status: "seen" as const }
-                        : message,
-                    ),
-                  }
-                : page.data,
-            })),
-          };
-        },
-      );
+      queryClient.setQueryData<
+        InfiniteData<ApiResponse<PaginatedChatMessages>>
+      >(chatKeys.messages(payload.conversationId), (previous) => {
+        if (!previous) return previous;
+        return {
+          ...previous,
+          pages: previous.pages.map((page) => ({
+            ...page,
+            data: page.data
+              ? {
+                  ...page.data,
+                  messages: page.data.messages.map((message) =>
+                    message.senderId === myUserId
+                      ? { ...message, status: "seen" as const }
+                      : message,
+                  ),
+                }
+              : page.data,
+          })),
+        };
+      });
     };
 
     const handleTypingStarted = (payload: {
@@ -533,7 +557,9 @@ const isImageFile = (file: File) => file.type.startsWith("image/");
     const socket = socketRef.current;
     if (!socket || !resolvedActiveConversationId) return;
 
-    socket.emit("joinConversation", { conversationId: resolvedActiveConversationId });
+    socket.emit("joinConversation", {
+      conversationId: resolvedActiveConversationId,
+    });
     socket.emit("markSeen", { conversationId: resolvedActiveConversationId });
   }, [resolvedActiveConversationId]);
 
@@ -547,7 +573,9 @@ const isImageFile = (file: File) => file.type.startsWith("image/");
 
     // Stop typing immediately when sending message
     if (socketRef.current?.connected) {
-      socketRef.current.emit("typingStopped", { conversationId: resolvedActiveConversationId });
+      socketRef.current.emit("typingStopped", {
+        conversationId: resolvedActiveConversationId,
+      });
     }
     if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
 
@@ -586,12 +614,16 @@ const isImageFile = (file: File) => file.type.startsWith("image/");
 
     // Typing logic
     if (socketRef.current?.connected && resolvedActiveConversationId) {
-      socketRef.current.emit("typingStarted", { conversationId: resolvedActiveConversationId });
+      socketRef.current.emit("typingStarted", {
+        conversationId: resolvedActiveConversationId,
+      });
 
       if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
-      
+
       typingTimeoutRef.current = setTimeout(() => {
-        socketRef.current?.emit("typingStopped", { conversationId: resolvedActiveConversationId });
+        socketRef.current?.emit("typingStopped", {
+          conversationId: resolvedActiveConversationId,
+        });
       }, 2000); // 2 second timeout
     }
   };
@@ -653,7 +685,9 @@ const isImageFile = (file: File) => file.type.startsWith("image/");
   const handleForwardToConversation = async (targetConversationId: string) => {
     if (!forwardSourceMessageId) return;
 
-    const sourceMessage = messages.find((m) => m._id === forwardSourceMessageId);
+    const sourceMessage = messages.find(
+      (m) => m._id === forwardSourceMessageId,
+    );
     if (!sourceMessage) return;
 
     const socket = socketRef.current;
@@ -691,7 +725,8 @@ const isImageFile = (file: File) => file.type.startsWith("image/");
   }, [resolvedActiveConversationId, messages.length, markSeenMutation]);
 
   return (
-    <div className='w-full h-[calc(100vh-10rem)] min-h-[680px] rounded-lg border-2 border-[#D1CEC6] bg-[#F4F5F5] p-3 md:p-5'>
+    // h-[calc(100vh-10rem)]
+    <div className='w-full  min-h-170 rounded-lg border-2 border-[#D1CEC6] bg-[#F4F5F5] p-3 md:p-5'>
       <div className='grid h-full grid-cols-1 gap-4 lg:grid-cols-[1fr_350px]'>
         <div className='flex h-full flex-col rounded-md bg-[#F4F5F5]'>
           <div className='flex items-center justify-between border-b border-[#D8DAD9] px-2 pb-3'>
@@ -796,7 +831,9 @@ const isImageFile = (file: File) => file.type.startsWith("image/");
                                 </div>
                               ) : null}
                               {item.forwardedFrom ? (
-                                <p className='mt-1 text-xs opacity-80'>Forwarded</p>
+                                <p className='mt-1 text-xs opacity-80'>
+                                  Forwarded
+                                </p>
                               ) : null}
                             </>
                           )}
@@ -817,7 +854,8 @@ const isImageFile = (file: File) => file.type.startsWith("image/");
                               <MoreVertical size={14} />
                             </button>
                             {openMessageMenuId === item._id ? (
-                              <div className={`absolute  top-6 z-20 min-w-36 rounded-md border border-[#D1CEC6] bg-white p-1 text-[#222] shadow-md ${isMine ? 'right-0' : '-right-24 '}`}>
+                              <div
+                                className={`absolute  top-6 z-20 min-w-36 rounded-md border border-[#D1CEC6] bg-white p-1 text-[#222] shadow-md ${isMine ? "right-0" : "-right-24 "}`}>
                                 <button
                                   type='button'
                                   onClick={() => {
@@ -862,13 +900,17 @@ const isImageFile = (file: File) => file.type.startsWith("image/");
 
             {activeConversation?.property ? (
               <div className='mt-4 rounded-md border border-[#D1CEC6] bg-white p-3 shadow-sm'>
-                <p className='mb-2 text-xs font-semibold text-[#59796A]'>Property Context</p>
+                <p className='mb-2 text-xs font-semibold text-[#59796A]'>
+                  Property Context
+                </p>
                 <div className='flex items-center gap-3'>
                   <div className='h-14 w-20 overflow-hidden rounded-md bg-[#E2E4E3]'>
                     {activeConversation.property.thumbnail?.image ? (
                       <Image
                         src={activeConversation.property.thumbnail.image}
-                        alt={activeConversation.property.propertyName ?? "Property"}
+                        alt={
+                          activeConversation.property.propertyName ?? "Property"
+                        }
                         width={80}
                         height={56}
                         className='h-full w-full object-cover'
@@ -890,7 +932,10 @@ const isImageFile = (file: File) => file.type.startsWith("image/");
                   </div>
                   <div className='text-right'>
                     <p className='text-sm font-semibold'>
-                      ${Number(activeConversation.property.price ?? 0).toLocaleString()}
+                      $
+                      {Number(
+                        activeConversation.property.price ?? 0,
+                      ).toLocaleString()}
                     </p>
                     <Link
                       href={`/properties/${activeConversation.property._id}`}
@@ -904,10 +949,10 @@ const isImageFile = (file: File) => file.type.startsWith("image/");
             {typingUsers.size > 0 ? (
               <div className='mt-2 flex items-center gap-1 p-2 text-xs italic text-[#6A6A66]'>
                 {otherParticipant?.name ?? "Someone"} is typing
-                <span className="flex gap-[2px] ml-1 h-1.5">
-                  <span className="w-1.5 h-1.5 bg-[#6A6A66] rounded-full animate-bounce [animation-delay:-0.3s]"></span>
-                  <span className="w-1.5 h-1.5 bg-[#6A6A66] rounded-full animate-bounce [animation-delay:-0.15s]"></span>
-                  <span className="w-1.5 h-1.5 bg-[#6A6A66] rounded-full animate-bounce"></span>
+                <span className='flex gap-0.5 ml-1 h-1.5'>
+                  <span className='w-1.5 h-1.5 bg-[#6A6A66] rounded-full animate-bounce [animation-delay:-0.3s]'></span>
+                  <span className='w-1.5 h-1.5 bg-[#6A6A66] rounded-full animate-bounce [animation-delay:-0.15s]'></span>
+                  <span className='w-1.5 h-1.5 bg-[#6A6A66] rounded-full animate-bounce'></span>
                 </span>
               </div>
             ) : null}
@@ -920,7 +965,11 @@ const isImageFile = (file: File) => file.type.startsWith("image/");
                   <span
                     key={`${file.name}-${file.size}`}
                     className='inline-flex items-center gap-1 rounded-full bg-[#DEE2E0] px-3 py-1 text-xs'>
-                    {isImageFile(file) ? <ImageIcon size={12} /> : <FileText size={12} />}
+                    {isImageFile(file) ? (
+                      <ImageIcon size={12} />
+                    ) : (
+                      <FileText size={12} />
+                    )}
                     {file.name}
                   </span>
                 ))}
@@ -942,7 +991,7 @@ const isImageFile = (file: File) => file.type.startsWith("image/");
                 placeholder='Type your message'
                 className='h-11 flex-1 rounded-md border border-[#C5CAC8] bg-[#EEF1F0] px-3 text-sm outline-none'
                 onKeyDown={(e) => {
-                  if (e.key === 'Enter') handleSendMessage();
+                  if (e.key === "Enter") handleSendMessage();
                 }}
               />
               <button
@@ -960,7 +1009,7 @@ const isImageFile = (file: File) => file.type.startsWith("image/");
           </div>
         </div>
 
-        <aside className='h-full rounded-md bg-[#ECEFEE] p-3'>
+        <aside className=' h-full rounded-md bg-[#ECEFEE] p-3'>
           <div className='mb-3 flex items-center justify-between'>
             <h2 className='text-[32px] font-medium text-[#202020]'>Messages</h2>
             {forwardSourceMessageId ? (
@@ -1007,7 +1056,9 @@ const isImageFile = (file: File) => file.type.startsWith("image/");
                         ) : null}
                         <span
                           className={`absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full border border-white ${
-                            participant?.isOnline ? "bg-[#2FAE5B]" : "bg-[#B0B5B2]"
+                            participant?.isOnline
+                              ? "bg-[#2FAE5B]"
+                              : "bg-[#B0B5B2]"
                           }`}
                         />
                       </div>
@@ -1050,11 +1101,12 @@ const isImageFile = (file: File) => file.type.startsWith("image/");
             {/* Infinite scroll sentinel — triggers next page load when visible */}
             <div ref={conversationSentinelRef} className='py-1'>
               {isFetchingNextConversationsPage ? (
-                <p className='text-center text-xs text-[#6A6A66]'>Loading more…</p>
+                <p className='text-center text-xs text-[#6A6A66]'>
+                  Loading more…
+                </p>
               ) : null}
             </div>
           </div>
-
         </aside>
       </div>
       {forwardSourceMessageId ? (
@@ -1073,18 +1125,24 @@ const isImageFile = (file: File) => file.type.startsWith("image/");
               {visibleConversations
                 .filter((item) => item._id !== resolvedActiveConversationId)
                 .map((conversation) => {
-                  const participant = getOtherParticipant(conversation, myUserId);
+                  const participant = getOtherParticipant(
+                    conversation,
+                    myUserId,
+                  );
                   return (
                     <button
                       key={`forward-${conversation._id}`}
                       type='button'
-                      onClick={() => void handleForwardToConversation(conversation._id)}
+                      onClick={() =>
+                        void handleForwardToConversation(conversation._id)
+                      }
                       className='w-full rounded border border-[#D1CEC6] p-2 text-left hover:bg-[#F8FAF9]'>
                       <p className='text-sm font-semibold'>
                         {participant?.name ?? "Unknown User"}
                       </p>
                       <p className='truncate text-xs text-[#6A6A66]'>
-                        {conversation.property?.propertyName ?? "Property conversation"}
+                        {conversation.property?.propertyName ??
+                          "Property conversation"}
                       </p>
                     </button>
                   );
@@ -1097,14 +1155,11 @@ const isImageFile = (file: File) => file.type.startsWith("image/");
   );
 }
 
-
-import React from 'react';
-
 const UserMessagePage = () => {
   return (
-   <Suspense fallback={<span>Loading.........</span>}>
-    <UserMessage/>
-   </Suspense>
+    <Suspense fallback={<span>Loading.........</span>}>
+      <UserMessage />
+    </Suspense>
   );
 };
 

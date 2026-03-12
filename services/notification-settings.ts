@@ -1,4 +1,4 @@
-'use server'
+"use server";
 import { axiosServer } from "@/lib/axiosServer";
 import { AxiosError } from "axios";
 
@@ -7,22 +7,22 @@ import { AxiosError } from "axios";
 // ============================================================================
 
 export enum NotificationSettingsTitle {
-  ALERT = 'New Listing Alerts',
-  REMINDER = 'Open House Reminders',
-  ACTIVITY = 'Favorites Activity',
-  LIVE = 'Listing Live Notification',
-  MARKET = 'Market Updates',
-  DOCUMENT_REMINDERS = 'Document Submission Reminders',
-  USER_REPORT = 'User Reports',
-  MODERATION = 'Listing Moderation',
+  ALERT = "New Listing Alerts",
+  REMINDER = "Open House Reminders",
+  ACTIVITY = "Favorites Activity",
+  LIVE = "Listing Live Notification",
+  MARKET = "Market Updates",
+  DOCUMENT_REMINDERS = "Document Submission Reminders",
+  USER_REPORT = "User Reports",
+  MODERATION = "Listing Moderation",
 }
 
 // This matches your NotificationType from notification.schema
 export enum NotificationType {
-  INFO = 'info',
-  SUCCESS = 'success',
-  WARNING = 'warning',
-  ERROR = 'error',
+  INFO = "info",
+  SUCCESS = "success",
+  WARNING = "warning",
+  ERROR = "error",
 }
 
 // Interface for Notification Settings (matching your schema)
@@ -76,15 +76,18 @@ export const getAllNotificationSettings = async (): Promise<
 > => {
   try {
     const axiosInstance = await getAxiosInstance();
-    const response = await axiosInstance.get<ApiResponse<INotificationSettings[]>>(
-      "/notification-settings"
-    );
+    const response = await axiosInstance.get<
+      ApiResponse<INotificationSettings[]>
+    >("/notification-settings");
 
-    console.log("✅ Notification settings fetched successfully:", response.data);
+    console.log(
+      "✅ Notification settings fetched successfully:",
+      response.data,
+    );
     return response.data;
   } catch (err) {
     const error = err as AxiosError<ApiErrorResponse>;
-    
+
     console.error("❌ Get all notification settings error:", {
       message: error.message,
       response: error.response?.data,
@@ -107,7 +110,9 @@ export const getAllNotificationSettings = async (): Promise<
       case 401:
         throw new Error("You are not authorized. Please login again.");
       case 403:
-        throw new Error("You don't have permission to view notification settings.");
+        throw new Error(
+          "You don't have permission to view notification settings.",
+        );
       case 404:
         throw new Error("Notification settings not found.");
       case 500:
@@ -118,7 +123,7 @@ export const getAllNotificationSettings = async (): Promise<
     throw new Error(
       error.response?.data?.message ||
         error.message ||
-        "Failed to fetch notification settings. Please try again."
+        "Failed to fetch notification settings. Please try again.",
     );
   }
 };
@@ -127,15 +132,18 @@ export const getAllNotificationSettings = async (): Promise<
  * Get notification setting by ID
  */
 export const getNotificationSettingById = async (
-  id: string
+  id: string,
 ): Promise<ApiResponse<INotificationSettings>> => {
   try {
     const axiosInstance = await getAxiosInstance();
-    const response = await axiosInstance.get<ApiResponse<INotificationSettings>>(
-      `/notification-settings/${id}`
-    );
+    const response = await axiosInstance.get<
+      ApiResponse<INotificationSettings>
+    >(`/notification-settings/${id}`);
 
-    console.log(`✅ Notification setting ${id} fetched successfully:`, response.data);
+    console.log(
+      `✅ Notification setting ${id} fetched successfully:`,
+      response.data,
+    );
     return response.data;
   } catch (err) {
     const error = err as AxiosError<ApiErrorResponse>;
@@ -163,7 +171,9 @@ export const getNotificationSettingById = async (
       case 401:
         throw new Error("You are not authorized. Please login again.");
       case 403:
-        throw new Error("You don't have permission to view this notification setting.");
+        throw new Error(
+          "You don't have permission to view this notification setting.",
+        );
       case 404:
         throw new Error("Notification setting not found.");
       case 500:
@@ -173,7 +183,7 @@ export const getNotificationSettingById = async (
     throw new Error(
       error.response?.data?.message ||
         error.message ||
-        "Failed to fetch notification setting."
+        "Failed to fetch notification setting.",
     );
   }
 };
@@ -183,16 +193,18 @@ export const getNotificationSettingById = async (
  */
 export const updateNotificationSetting = async (
   id: string,
-  data: IUpdateNotificationSettings
+  data: IUpdateNotificationSettings,
 ): Promise<ApiResponse<INotificationSettings>> => {
   try {
     const axiosInstance = await getAxiosInstance();
-    const response = await axiosInstance.patch<ApiResponse<INotificationSettings>>(
-      `/notification-settings/${id}`,
-      data
-    );
+    const response = await axiosInstance.patch<
+      ApiResponse<INotificationSettings>
+    >(`/notification-settings/${id}`, data);
 
-    console.log(`✅ Notification setting ${id} updated successfully:`, response.data);
+    console.log(
+      `✅ Notification setting ${id} updated successfully:`,
+      response.data,
+    );
     return response.data;
   } catch (err) {
     const error = err as AxiosError<ApiErrorResponse>;
@@ -222,7 +234,9 @@ export const updateNotificationSetting = async (
         const errorMessages = Object.entries(validationErrors)
           .map(([field, messages]) => `${field}: ${messages.join(", ")}`)
           .join("; ");
-        throw new Error(errorMessages || "Validation failed. Please check your input.");
+        throw new Error(
+          errorMessages || "Validation failed. Please check your input.",
+        );
       }
     }
 
@@ -233,7 +247,9 @@ export const updateNotificationSetting = async (
       case 401:
         throw new Error("You are not authorized. Please login again.");
       case 403:
-        throw new Error("You don't have permission to update this notification setting.");
+        throw new Error(
+          "You don't have permission to update this notification setting.",
+        );
       case 404:
         throw new Error("Notification setting not found.");
       case 500:
@@ -243,7 +259,7 @@ export const updateNotificationSetting = async (
     throw new Error(
       error.response?.data?.message ||
         error.message ||
-        "Failed to update notification setting. Please try again."
+        "Failed to update notification setting. Please try again.",
     );
   }
 };
@@ -253,7 +269,7 @@ export const updateNotificationSetting = async (
  */
 export const toggleNotificationSetting = async (
   id: string,
-  isActive: boolean
+  isActive: boolean,
 ): Promise<ApiResponse<INotificationSettings>> => {
   return updateNotificationSetting(id, { isActive });
 };
@@ -263,16 +279,16 @@ export const toggleNotificationSetting = async (
  */
 export const getSettingsByType = async (
   settings: INotificationSettings[],
-  type: NotificationType
+  type: NotificationType,
 ): Promise<INotificationSettings[]> => {
-  return settings.filter(setting => setting.name === type);
+  return settings.filter((setting) => setting.name === type);
 };
 
 /**
  * Get active notification settings (helper function)
  */
 export const getActiveSettings = async (
-  settings: INotificationSettings[]
+  settings: INotificationSettings[],
 ): Promise<INotificationSettings[]> => {
-  return settings.filter(setting => setting.isActive);
+  return settings.filter((setting) => setting.isActive);
 };
