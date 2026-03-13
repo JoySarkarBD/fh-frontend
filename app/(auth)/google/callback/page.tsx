@@ -1,5 +1,6 @@
 "use client";
 
+import { storeGoogleTokenAction } from "@/services/auth";
 import { useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
@@ -8,16 +9,21 @@ function GoogleCallbackContent() {
   const searchParams = useSearchParams();
 
   useEffect(() => {
+    const token = searchParams.get("token");
     const role = searchParams.get("role")?.toLowerCase() || "user";
 
-    // Cookie is already set by backend, just wait a moment then redirect
-    setTimeout(() => {
+    if (!token) {
+      router.push("/login");
+      return;
+    }
+
+    storeGoogleTokenAction(token).then(() => {
       if (role === "admin") {
         router.push("/admin");
       } else {
         router.push("/dashboard/profile");
       }
-    }, 1000);
+    });
   }, [router, searchParams]);
 
   return (

@@ -111,6 +111,22 @@ export async function registerAction(payload: RegisterPayload) {
 }
 
 /**
+ * Stores the Google OAuth access token as a client-accessible cookie.
+ * Called by the frontend Google callback page after receiving the token from the redirect URL.
+ */
+export async function storeGoogleTokenAction(token: string): Promise<void> {
+  const cookieStore = await cookies();
+
+  cookieStore.set("accessToken", token, {
+    httpOnly: false,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+    path: "/",
+    maxAge: 86400,
+  });
+}
+
+/**
  * Logs in a user with the provided email and password
  */
 export async function loginAction(
