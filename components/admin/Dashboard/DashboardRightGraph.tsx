@@ -1,19 +1,19 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
 import { useAdminDashboardStats } from "@/actions/hooks/user.hooks";
+import { useEffect, useMemo, useState } from "react";
 import {
+  Cell,
   Line,
   LineChart,
+  Pie,
+  PieChart,
+  PieSectorDataItem,
+  ResponsiveContainer,
+  Sector,
   Tooltip,
   XAxis,
   YAxis,
-  ResponsiveContainer,
-  Pie,
-  PieChart,
-  Sector,
-  PieSectorDataItem,
-  Cell,
 } from "recharts";
 
 export default function DashboardRightGraph() {

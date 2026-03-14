@@ -150,6 +150,7 @@ export const getUserById = async (id: string) => {
  * @returns Dashboard statistics data for admin users, including total users, new users this month, active subscribers, total revenue, pending communications, and conversion rate.
  * @throws An error if the request fails, with details logged to the console for debugging.
  */
+
 export const getAdminDashboardStats =
   async (): Promise<DashboardStatsResponse> => {
     try {

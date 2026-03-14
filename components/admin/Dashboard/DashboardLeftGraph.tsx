@@ -1,19 +1,20 @@
 "use client";
 
 import { useAdminDashboardStats } from "@/actions/hooks/user.hooks";
-import { useEffect, useState } from "react";
+import { useState, useEffect } from "react";
 import {
-  Bar,
   BarChart,
-  ResponsiveContainer,
-  Tooltip,
+  Bar,
   XAxis,
   YAxis,
+  Tooltip,
+  ResponsiveContainer,
 } from "recharts";
 
 export default function DashboardLeftGraph() {
   const [isMobile, setIsMobile] = useState(false);
   const { data: stats, isLoading } = useAdminDashboardStats();
+  console.log(stats, 'stats');
 
   useEffect(() => {
     const checkMobile = () => setIsMobile(window.innerWidth < 768);

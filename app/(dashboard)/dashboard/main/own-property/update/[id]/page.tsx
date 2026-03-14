@@ -1,15 +1,15 @@
 'use client'
 
 import {
-  usePropertyById,
-  useUpdatePropertyMutation,
-  useUserOwnProperties,
+    usePropertyById,
+    useUpdatePropertyMutation,
+    useUserOwnProperties,
 } from '@/actions/hooks/property.hooks';
 import PropertyDetailsForm from '@/components/dashboard/property/PropertyDetailsForm';
 import PropertyForm from '@/components/dashboard/property/PropertyForm';
 import { IPropertyResponse, PropertyStatus } from '@/services/property';
 import { useParams } from 'next/navigation';
-import { useEffect, useMemo, useState } from 'react';
+import { FormEvent, useEffect, useMemo, useState } from 'react';
 
 type UpdatePropertyFormData = {
   propertyName: string;
@@ -215,11 +215,24 @@ const UpdatePropertyPage = () => {
     };
   }, [formData]);
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!propertyId) return;
     if (!validateForm()) return;
 
+    console.log('[UpdatePropertyPage] Submitting PATCH /property/:id', {
+      propertyId,
+      payloadKeys: Object.keys(payload),
+      isPublished: payload.isPublished,
+      propertyStatus: payload.propertyStatus,
+    });
+
     updateProperty.mutate({ id: propertyId, data: payload });
+  };
+
+  const handleFormSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    event.stopPropagation();
+    await handleSubmit();
   };
 
   if (!propertyId) return <div className='p-8'>Invalid property id.</div>;
@@ -228,7 +241,7 @@ const UpdatePropertyPage = () => {
 
   return (
     <div className='container mx-auto px-4'>
-      <div className='space-y-6'>
+      <form className='space-y-6' onSubmit={handleFormSubmit} noValidate>
         <PropertyForm
           formData={formData}
           updateFormData={updateFormData}
@@ -253,13 +266,13 @@ const UpdatePropertyPage = () => {
 
         <div className='flex justify-end gap-4'>
           <button
-            onClick={handleSubmit}
+            type='submit'
             disabled={updateProperty.isPending}
             className='px-6 py-3 bg-[#619B7F] text-white rounded-md hover:bg-[#4a7b63] transition disabled:opacity-50 disabled:cursor-not-allowed'>
             {updateProperty.isPending ? 'Updating Property...' : 'Update Property'}
           </button>
         </div>
-      </div>
+      </form>
     </div>
   );
 };
