@@ -1,8 +1,8 @@
 "use client";
-import { useEffect } from "react";
+import { useGetUserById } from "@/actions/hooks/user.hooks";
 import { Loader2, X } from "lucide-react";
 import Image from "next/image";
-import { useGetUserById } from "@/actions/hooks/user.hooks";
+import { useEffect } from "react";
 
 interface UserDetailsModalProps {
   userId: string;
@@ -48,13 +48,17 @@ export default function UserDetailsModal({
         ) : user ? (
           <div className='flex flex-col items-center gap-4'>
             <div className='w-20 h-20 rounded-full overflow-hidden bg-gray-100 border border-gray-200'>
-              <Image
-                src={user.profileImage || "/user.png"}
-                alt={user.name || "User"}
-                width={80}
-                height={80}
-                className='w-full h-full object-cover'
-              />
+             <Image
+  src={
+    typeof user.profileImage === "string"
+      ? user.profileImage
+      : user.profileImage?.image || "/user.png"
+  }
+  alt={user.name || "User"}
+  width={80}
+  height={80}
+  className='w-full h-full object-cover'
+/>
             </div>
             <div className='w-full'>
               <div className='mb-2'>
