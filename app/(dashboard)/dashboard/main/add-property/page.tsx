@@ -89,6 +89,7 @@ export default function AddProperty() {
         router.push('/dashboard/main/own-property');
       } catch (e) {
         // ignore navigation errors in non-browser contexts
+        console.error(e)
       }
     },
     onError: (error: Error) => {
