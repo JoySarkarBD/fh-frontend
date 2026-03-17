@@ -60,8 +60,7 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ initialProfile }) => {
   const updateProfileMutation = useUpdateProfileMutation({
     onSuccess: () => {
       setIsEditing(false);
-      setSelectedProfileImageFile(null);
-      setProfileImagePreview(null);
+    
       if (fileInputRef.current) {
         fileInputRef.current.value = "";
       }
