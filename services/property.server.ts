@@ -87,3 +87,26 @@ export async function getAllProperties(params?: {
     );
   }
 }
+
+export async function topFourProperty() {
+    try {
+        const axiosInstance = await getAxiosInstance();
+          const response = await axiosInstance.get<
+      ApiResponse<PaginatedPropertiesResponse>
+    >("/property/topFour",);
+    return response.data;
+      
+    } catch (error) {
+      const axiosError = error as AxiosError<ApiErrorResponse>;
+    const errorData = axiosError.response?.data as ApiErrorResponse | undefined;
+  
+    if (axiosError.response?.status === 403) {
+      throw new Error("You don't have permission to view all properties.");
+    }
+    throw new Error(
+      errorData?.message || axiosError.message || "Failed to fetch properties.",
+    );
+    }
+
+  
+}

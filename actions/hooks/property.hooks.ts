@@ -17,7 +17,7 @@ import {
   SavedPropertyOverviewResponse,
   savePropertyById,
 } from "@/services/property";
-import { getAllProperties, getOwnProperties } from "@/services/property.server";
+import { getAllProperties, getOwnProperties, topFourProperty } from "@/services/property.server";
 import {
   keepPreviousData,
   useMutation,
@@ -461,5 +461,20 @@ export const useSavedPropertyOverview = (
     staleTime: 1000 * 30,
     refetchOnMount: "always",
     refetchOnWindowFocus: true,
+    ...options,
+  });
+
+export const useGetTopFourProperty = (
+  options?: Omit<
+    UseQueryOptions<ApiResponse<PaginatedPropertiesResponse>>,
+    "queryKey" | "queryFn"
+  >,
+) =>
+  useQuery<ApiResponse<PaginatedPropertiesResponse>>({
+    queryKey: ["top-four-properties"],
+    queryFn: topFourProperty,
+    staleTime: 1000 * 60 * 5,
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
     ...options,
   });
